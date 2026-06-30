@@ -6,110 +6,111 @@
 <title>SC Blueprint Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+  /* Mission Control design language: gold (#ffb231) primary, warm dark surfaces,
+     glass card + amber hero glow, Space Grotesk headlines / Inter body. */
   :root {
-    --cyan: #36e0ff; --cyan-dim: #6fa8bd; --amber: #ffb23e;
-    --text: #eaf6fb; --muted: #8ba6b6;
-    --panel: rgba(7, 14, 20, 0.82); --line: rgba(54, 224, 255, 0.28);
-    --owned: #3effa6;
+    --text: #e3e2e2; --muted: #d6c4ae; --outline: #9f8e7a; --outline-v: #524534;
+    --surface: #1f2020; --surface-high: #292a2a;
+    --gold: #ffb231; --primary: #ffd7a1; --on-gold: #6d4700; --secondary: #ffb784; --error: #ffb4ab;
+    --glass-bg: rgba(24, 26, 26, 0.82); --glass-border: rgba(255, 255, 255, 0.06);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: transparent; }
-  body { font-family: "Rajdhani", system-ui, sans-serif; color: var(--text); }
+  body { font-family: "Inter", system-ui, sans-serif; color: var(--text); }
 
   #panel {
-    width: 380px; margin: 12px;
-    background: linear-gradient(160deg, rgba(11, 20, 28, 0.9), rgba(5, 10, 15, 0.82));
-    border: 1px solid var(--line);
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 18px 60px rgba(0,0,0,0.55), inset 0 0 60px rgba(54,224,255,0.05);
-    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
-    overflow: hidden;
+    position: relative; width: 380px; margin: 12px; border-radius: 18px; overflow: hidden;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
   }
+  /* Ambient amber glow (MC hero-gradient). */
+  #panel::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 78% 12%, rgba(255, 178, 49, 0.10), transparent 55%); }
   #panel.empty .pool, #panel.empty .head .progress { display: none; }
 
-  .head { padding: 14px 16px 12px; position: relative;
-    background: linear-gradient(90deg, rgba(54,224,255,0.08), transparent 60%);
-    border-bottom: 1px solid rgba(54,224,255,0.12);
-    /* Drag handle for the Electron overlay (ignored by OBS/browser). Move the
-       window by the header when it's Interactive (Ctrl+Alt+B). */
+  .head { position: relative; padding: 16px 18px 14px; border-bottom: 1px solid var(--glass-border);
+    /* Drag handle for the Electron overlay (ignored by OBS/browser): move the window
+       by the header while hovering (interactive). */
     -webkit-app-region: drag; cursor: grab; }
-  /* Interactive controls inside the header must stay clickable. */
-  #missionSel, .progress { -webkit-app-region: no-drag; }
-  .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--cyan); font-weight: 600; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan);
-    box-shadow: 0 0 8px var(--cyan); animation: pulse 1.8s ease-in-out infinite; }
+  #missionPick, .progress { -webkit-app-region: no-drag; }
+
+  .eyebrow { display: flex; align-items: center; gap: 8px; font-family: "Space Grotesk", sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
+    box-shadow: 0 0 8px rgba(255, 178, 49, 0.7); animation: pulse 1.8s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-  .title { font-family: "Orbitron", sans-serif; font-weight: 800; font-size: 21px; line-height: 1.1;
-    margin-top: 8px; color: #fff; text-shadow: 0 0 16px rgba(54,224,255,0.45); }
-  .sub { margin-top: 3px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--cyan-dim); font-weight: 600; }
+
+  .title { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 22px; line-height: 1.05;
+    letter-spacing: -0.02em; text-transform: uppercase; margin-top: 8px; color: var(--text); }
+  .sub { margin-top: 4px; font-family: "Space Grotesk", sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.18em; text-transform: uppercase; color: rgba(214, 196, 174, 0.55); }
+
   /* Custom mission dropdown (native <select> popups don't render in a transparent
-     always-on-top window). -webkit-app-region:no-drag so it stays clickable. */
-  #missionPick { display: none; position: relative; margin-top: 9px; -webkit-app-region: no-drag; }
+     always-on-top window). */
+  #missionPick { display: none; position: relative; margin-top: 10px; }
   #missionBtn { width: 100%; display: flex; align-items: center; gap: 8px; cursor: pointer;
-    font-family: "Rajdhani", sans-serif; font-size: 13px; font-weight: 600; text-align: left;
-    background: rgba(54,224,255,0.1); color: var(--text); border: 1px solid var(--cyan); padding: 6px 9px; }
-  #missionBtn:hover { background: rgba(54,224,255,0.18); }
+    font-family: "Inter", sans-serif; font-size: 13px; font-weight: 600; text-align: left;
+    background: rgba(255, 178, 49, 0.08); color: var(--text);
+    border: 1px solid rgba(255, 178, 49, 0.35); border-radius: 10px; padding: 7px 10px; }
+  #missionBtn:hover { background: rgba(255, 178, 49, 0.16); border-color: rgba(255, 178, 49, 0.6); }
   #missionBtnLabel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #missionBtn .caret { color: var(--cyan); font-size: 12px; }
-  #missionMenu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 20;
-    background: #081218; border: 1px solid var(--cyan); max-height: 240px; overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+  #missionBtn .caret { color: var(--gold); font-size: 12px; }
+  #missionMenu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+    background: var(--surface); border: 1px solid var(--glass-border); border-radius: 10px;
+    max-height: 240px; overflow-y: auto; box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); }
   #missionMenu.open { display: block; }
-  #missionMenu .opt { padding: 7px 10px; font-size: 13px; cursor: pointer; border-bottom: 1px solid rgba(54,224,255,0.1); }
+  #missionMenu .opt { padding: 8px 11px; font-size: 13px; cursor: pointer; color: var(--muted);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
   #missionMenu .opt:last-child { border-bottom: none; }
-  #missionMenu .opt:hover { background: rgba(54,224,255,0.14); }
-  #missionMenu .opt.active { color: var(--cyan); font-weight: 700; }
-  .progress { position: absolute; top: 14px; right: 16px; text-align: right; }
-  .progress .frac { font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 18px; color: var(--cyan); }
-  .progress .lbl { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-  .completed { margin-top: 6px; display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--owned); border: 1px solid rgba(62,255,166,0.5);
-    background: rgba(62,255,166,0.08); padding: 1px 8px;
-    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+  #missionMenu .opt:hover { background: rgba(255, 178, 49, 0.12); color: var(--text); }
+  #missionMenu .opt.active { color: var(--gold); font-weight: 700; }
 
-  .pool { padding: 8px 12px 12px; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin-top: 4px;
-    background: rgba(255,255,255,0.02); border-left: 2px solid rgba(54,224,255,0.18);
-    cursor: pointer; user-select: none; transition: background .15s, border-color .15s; }
-  .row:hover { background: rgba(54,224,255,0.06); }
-  .row.owned { border-left-color: var(--owned);
-    background: linear-gradient(90deg, rgba(62,255,166,0.1), rgba(62,255,166,0.015)); }
-  .mark { flex: none; width: 16px; height: 16px; display: grid; place-items: center;
-    border: 1px solid var(--line); color: var(--owned); font-size: 12px; font-weight: 700;
-    clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); }
-  .row.owned .mark { border-color: rgba(62,255,166,0.6); background: rgba(62,255,166,0.12); }
+  .progress { position: absolute; top: 16px; right: 18px; text-align: right; }
+  .progress .frac { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 18px; color: var(--gold); }
+  .progress .lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(214, 196, 174, 0.5); }
+  .completed { margin-top: 8px; display: inline-block; font-family: "Space Grotesk", sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold);
+    border: 1px solid rgba(255, 178, 49, 0.5); background: rgba(255, 178, 49, 0.1); padding: 2px 9px; border-radius: 999px; }
+
+  .pool { padding: 10px 12px 12px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 9px; margin-top: 4px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025); cursor: pointer; user-select: none; transition: background .15s; }
+  .row:hover { background: rgba(255, 255, 255, 0.06); }
+  .row.owned { background: rgba(255, 178, 49, 0.10); }
+  .mark { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 6px;
+    border: 1px solid var(--outline-v); color: var(--on-gold); font-size: 12px; font-weight: 800; }
+  .row.owned .mark { border-color: var(--gold); background: var(--gold); color: var(--on-gold); }
   .name { flex: 1; font-size: 14px; font-weight: 500; color: var(--muted); }
-  .row.owned .name { color: #fff; }
-  .name .ovr { font-size: 10px; color: var(--amber); margin-left: 6px; letter-spacing: 1px; }
-  .chance { flex: none; font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 11px; color: var(--cyan-dim); }
+  .row.owned .name { color: var(--text); }
+  .name .ovr { font-size: 10px; color: var(--secondary); margin-left: 6px; letter-spacing: 0.05em; }
+  .chance { flex: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 11px; color: rgba(214, 196, 174, 0.6); }
 
-  .msg { padding: 26px 18px; text-align: center; color: var(--muted); font-size: 14px; }
-  .msg b { color: var(--cyan); display: block; font-family: "Orbitron", sans-serif;
-    font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-  .foot { padding: 8px 16px 12px; font-size: 11px; color: var(--muted); letter-spacing: 1px;
-    display: flex; justify-content: space-between; border-top: 1px solid rgba(54,224,255,0.08); }
-  .foot { flex-direction: column; gap: 6px; }
+  .msg { padding: 28px 18px; text-align: center; color: var(--muted); font-size: 14px; }
+  .msg b { color: var(--gold); display: block; font-family: "Space Grotesk", sans-serif;
+    font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+
+  .foot { padding: 10px 16px 12px; font-size: 11px; color: rgba(214, 196, 174, 0.6);
+    display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--glass-border); }
   .footrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
-  .foot .patch { color: var(--cyan-dim); }
-  #verify { font-family: "Rajdhani", sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .5px;
-    cursor: pointer; padding: 3px 10px; border: 1px solid var(--line); color: var(--cyan);
-    background: rgba(54,224,255,0.08);
-    clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px)); }
-  #verify:hover { background: rgba(54,224,255,0.18); }
+  .foot .patch { color: rgba(214, 196, 174, 0.45); font-size: 10px; }
+  #verify { font-family: "Space Grotesk", sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; cursor: pointer; padding: 4px 11px; border-radius: 8px;
+    border: 1px solid rgba(255, 178, 49, 0.4); color: var(--gold); background: rgba(255, 178, 49, 0.08); }
+  #verify:hover { background: rgba(255, 178, 49, 0.18); }
   #verify:disabled { opacity: .6; cursor: default; }
-  #vstatus { color: var(--owned); font-size: 11px; }
+  #vstatus { color: var(--gold); font-size: 11px; }
 
   /* Confirm-before-removing (prevents an accidental click un-owning a blueprint). */
-  .row.confirming { background: rgba(255,107,107,0.08); border-left-color: #ff6b6b; }
+  .row.confirming { background: rgba(255, 180, 171, 0.10); }
   .row .confirm { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .confirm .cf-q { font-size: 11px; color: var(--amber); letter-spacing: .5px; white-space: nowrap; }
-  .confirm button { font-family: "Rajdhani", sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
-    padding: 2px 9px; border: 1px solid var(--line); background: rgba(54,224,255,0.08); color: var(--text);
-    clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); }
-  .confirm .cf-yes { border-color: #ff6b6b; color: #ff6b6b; background: rgba(255,107,107,0.12); }
+  .confirm .cf-q { font-size: 11px; color: var(--secondary); white-space: nowrap; }
+  .confirm button { font-family: "Inter", sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
+    padding: 3px 10px; border-radius: 7px; border: 1px solid var(--outline-v); background: rgba(255, 255, 255, 0.05); color: var(--text); }
+  .confirm .cf-yes { border-color: var(--error); color: var(--error); background: rgba(255, 180, 171, 0.12); }
 </style>
 </head>
 <body>
