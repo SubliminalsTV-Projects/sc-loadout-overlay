@@ -125,6 +125,13 @@ export function parseMissionEvent(e: LogEvent): MissionEvent | null {
       return { kind: "end", ts: e.timestamp, missionId: mid[1], state: m.match(RE.endState)?.[1] ?? "" };
     }
 
+    // Fires on ANY mission end incl. ABANDON (which emits no MissionEnded+state).
+    // Format: "Ending mission for player. MissionId[<uuid>] Player[...]".
+    case "EndMission": {
+      const mid = m.match(new RegExp(`MissionId\\[(${UUID})\\]`));
+      return mid ? { kind: "end", ts: e.timestamp, missionId: mid[1], state: "ENDED" } : null;
+    }
+
     // PU context (re)established — login or server/shard change. map="megamap" =
     // the persistent universe (ignore Arena Commander / other game modes).
     case "Context Establisher Done": {
