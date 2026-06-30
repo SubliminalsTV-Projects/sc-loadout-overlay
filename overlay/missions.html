@@ -23,6 +23,13 @@
   html, body { margin: 0; background: transparent; }
   body { font-family: var(--sans); color: var(--cyan-text); }
 
+  /* Thin, themed scrollbars (the default chrome is jarring on the HUD). */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(92, 198, 224, 0.28); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(92, 198, 224, 0.5); }
+  * { scrollbar-width: thin; scrollbar-color: rgba(92, 198, 224, 0.28) transparent; }
+
   #panel {
     position: relative; width: 380px; margin: 16px; border-radius: 12px;
     background: linear-gradient(180deg, rgba(13, 27, 40, 0.72), rgba(8, 17, 26, 0.8));
@@ -202,9 +209,14 @@
 
     const rows = [];
     for (const pool of v.pools) {
+      // Real odds of getting a specific blueprint = its weight / the pool's total,
+      // not the raw per-entry chance (which is 1.0 for every entry → misleading 100%).
+      const poolSum = pool.blueprints.reduce((a, b) => a + (b.chance || 0), 0) || 1;
       for (const b of pool.blueprints) {
         const ovr = b.source === "override" ? '<span class="ovr">[manual]</span>' : "";
-        const ch = b.chance != null && b.chance < 1 ? '<span class="chance">' + Math.round(b.chance * 100) + "%</span>" : "";
+        const pctNum = ((b.chance || 0) / poolSum) * 100;
+        const pct = pctNum >= 10 ? Math.round(pctNum) : pctNum.toFixed(1);
+        const ch = '<span class="chance">' + pct + "%</span>";
         rows.push(
           '<div class="row ' + (b.owned ? "owned" : "") + '" data-name="' + escapeAttr(b.name) + '" title="Click to toggle owned">' +
             '<span class="mark">' + (b.owned ? "✔" : "") + "</span>" +
