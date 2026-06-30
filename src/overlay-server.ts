@@ -337,7 +337,12 @@ const server = createServer(async (req, res) => {
       res.writeHead(404);
       res.end("not found");
     } else {
-      res.writeHead(200, { "Content-Type": MIME[extname(p)] ?? "application/octet-stream" });
+      // no-store so the Electron/OBS view always gets the latest overlay HTML/CSS/JS
+      // (stale caching made UI changes appear not to take effect).
+      res.writeHead(200, {
+        "Content-Type": MIME[extname(p)] ?? "application/octet-stream",
+        "Cache-Control": "no-store, must-revalidate",
+      });
       res.end(buf);
     }
   });

@@ -114,7 +114,8 @@ function createOverlay() {
   // Float above borderless fullscreen games.
   overlay.setAlwaysOnTop(true, "screen-saver");
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  overlay.loadURL(HUD_URL);
+  // Clear any cached copy + cache-bust the URL so UI changes always show up.
+  overlay.webContents.session.clearCache().finally(() => overlay.loadURL(`${HUD_URL}?v=${Date.now()}`));
   applyMouse();
   overlay.on("moved", saveBounds);
   overlay.on("resize", saveBounds);
@@ -153,7 +154,7 @@ function openConfig() {
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true },
   });
-  configWin.loadURL(CONFIG_URL);
+  configWin.loadURL(`${CONFIG_URL}?v=${Date.now()}`);
   configWin.on("closed", () => {
     configWin = null;
   });

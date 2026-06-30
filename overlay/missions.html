@@ -204,7 +204,7 @@
     const pick = $("missionPick");
     const list = v.missions || [];
     if (list.length < 1) { pick.style.display = "none"; return; }
-    pick.style.display = "";
+    pick.style.display = "block";
     $("missionBtnLabel").textContent = v.selectedId
       ? (list.find((m) => m.id === v.selectedId)?.title || v.title || "Mission")
       : ("Auto: " + (v.title || "none"));
