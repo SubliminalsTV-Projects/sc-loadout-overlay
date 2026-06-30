@@ -11,7 +11,7 @@
  * witnessed, seeded/corrected by manual overrides. See data/README.md.
  */
 import { EventEmitter } from "node:events";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { MissionEvent } from "./missions-parser.js";
 
@@ -44,7 +44,11 @@ export interface BlueprintStatus {
   chance: number;
 }
 export interface TrackedView {
+  /** The loaded dataset's version (the pools being shown). */
   patch: string | null;
+  /** The player's actual build changelist from the log (may differ from the dataset
+   *  if their exact build isn't bundled — the UI flags that). */
+  build: string | null;
   contractKey: string | null;
   title: string | null;
   generator: string | null;
@@ -104,6 +108,9 @@ export class MissionTracker extends EventEmitter {
   private dataset: Dataset | null = null;
   private patch: string | null = null;
   private detectedChangelist: string | null = null;
+  /** Version family (major.minor, e.g. "4.8") from the log header — picks the right
+   *  dataset when the exact build isn't bundled. See detectPatch / loadDataset. */
+  private detectedFamily: string | null = null;
 
   private observed = new Set<string>();
   private overrides = new Map<string, boolean>();
@@ -126,12 +133,21 @@ export class MissionTracker extends EventEmitter {
 
   // ---- dataset / patch ----
 
-  /** Detect the patch from a raw log line and (re)load the matching dataset. */
+  /** Detect the patch from a raw log line and (re)load the matching dataset.
+   *  Tracks BOTH the build changelist and the version family (major.minor) — CIG's
+   *  Perforce changelists aren't monotonic across branches (a later 4.8.2 hotfix can
+   *  outnumber a 4.9.0 build), so the family is what disambiguates which dataset is
+   *  correct when the exact build isn't bundled. The header lines can arrive in any
+   *  order, so re-pick the dataset whenever either signal changes. */
   detectPatch(rawLine: string): void {
+    const fam = rawLine.match(/(?:Product|File)Version:\s*(\d+\.\d+)/);
+    const familyChanged = !!fam && fam[1] !== this.detectedFamily;
+    if (familyChanged) this.detectedFamily = fam![1];
     const cl = detectChangelist(rawLine);
-    if (!cl || cl === this.detectedChangelist) return;
-    this.detectedChangelist = cl;
-    void this.ensureDataset(cl);
+    const clChanged = !!cl && cl !== this.detectedChangelist;
+    if (clChanged) this.detectedChangelist = cl;
+    if (clChanged) void this.ensureDataset(cl!);
+    else if (familyChanged) this.loadDataset(this.detectedChangelist ?? undefined);
   }
 
   /** Load the changelist's dataset, fetching it from the public endpoint first if we
@@ -153,10 +169,13 @@ export class MissionTracker extends EventEmitter {
     this.loadDataset(changelist);
   }
 
-  /** Load blueprints.<changelist>.json, falling back to blueprints.latest.json. */
+  /** Load the right dataset: exact build → same version family → newest bundled.
+   *  The family step matters when the exact build isn't shipped (a 4.8.2 player must
+   *  get 4.8.2 pools, not the newest 4.9.0 — "latest" alone would be wrong). */
   loadDataset(changelist?: string): void {
     const candidates = [
       changelist ? join(this.dataDir, `blueprints.${changelist}.json`) : null,
+      this.datasetPathForFamily(this.detectedFamily),
       join(this.dataDir, "blueprints.latest.json"),
     ].filter(Boolean) as string[];
     for (const p of candidates) {
@@ -170,6 +189,26 @@ export class MissionTracker extends EventEmitter {
         /* try next */
       }
     }
+  }
+
+  /** Path to the bundled dataset whose version matches `family` ("4.8" → 4.8.2-…). */
+  private datasetPathForFamily(family: string | null): string | null {
+    if (!family) return null;
+    try {
+      for (const f of readdirSync(this.dataDir)) {
+        if (!/^blueprints\.\d+\.json$/.test(f)) continue;
+        const p = join(this.dataDir, f);
+        try {
+          const v = (JSON.parse(readFileSync(p, "utf8")) as Dataset).version;
+          if (v && v.startsWith(family + ".")) return p;
+        } catch {
+          /* skip unreadable */
+        }
+      }
+    } catch {
+      /* no data dir */
+    }
+    return null;
   }
 
   // ---- event ingestion ----
@@ -300,6 +339,7 @@ export class MissionTracker extends EventEmitter {
 
     return {
       patch: this.patch,
+      build: this.detectedChangelist,
       contractKey: key,
       title: mission?.title ?? tracked?.title ?? null,
       generator: tracked?.generator ?? mission?.generatorClass ?? null,

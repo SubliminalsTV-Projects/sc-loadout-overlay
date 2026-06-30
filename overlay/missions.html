@@ -70,6 +70,15 @@
   .foot { padding: 8px 16px 12px; font-size: 11px; color: var(--muted); letter-spacing: 1px;
     display: flex; justify-content: space-between; border-top: 1px solid rgba(54,224,255,0.08); }
   .foot .patch { color: var(--cyan-dim); }
+
+  /* Confirm-before-removing (prevents an accidental click un-owning a blueprint). */
+  .row.confirming { background: rgba(255,107,107,0.08); border-left-color: #ff6b6b; }
+  .row .confirm { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .confirm .cf-q { font-size: 11px; color: var(--amber); letter-spacing: .5px; white-space: nowrap; }
+  .confirm button { font-family: "Rajdhani", sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
+    padding: 2px 9px; border: 1px solid var(--line); background: rgba(54,224,255,0.08); color: var(--text);
+    clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); }
+  .confirm .cf-yes { border-color: #ff6b6b; color: #ff6b6b; background: rgba(255,107,107,0.12); }
 </style>
 </head>
 <body>
@@ -96,7 +105,11 @@
   function render(v) {
     current = v;
     const panel = $("panel");
-    $("patch").textContent = v.patch || "";
+    // Show the dataset version, and flag when the player's actual build isn't the one
+    // we have data for (pools are an approximation from the same family).
+    let patchTxt = v.patch || "";
+    if (v.build && v.patch && !v.patch.includes(v.build)) patchTxt += " · build " + v.build + " (approx)";
+    $("patch").textContent = patchTxt;
     $("collected").textContent = "collected: " + (v.collectedTotal ?? 0);
     $("completed").innerHTML = v.completed ? '<span class="completed">Mission complete</span>' : "";
 
@@ -140,16 +153,38 @@
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
   function escapeAttr(s){return s.replace(/"/g,"&quot;");}
 
+  function setOwned(name, owned) {
+    fetch("/api/missions/own", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, owned }),
+    });
+  }
+
   // Click a blueprint to manually toggle owned (seeds pre-existing inventory).
+  // Marking owned is one click; UN-marking asks first, so an accidental click while
+  // looking at an item can't silently wipe a blueprint you actually own.
   $("pool").addEventListener("click", (e) => {
     const row = e.target.closest(".row");
     if (!row || !current) return;
     const name = row.getAttribute("data-name");
-    const nowOwned = !row.classList.contains("owned");
-    fetch("/api/missions/own", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, owned: nowOwned }),
-    });
+
+    if (e.target.classList.contains("cf-yes")) { setOwned(name, false); return; }
+    if (e.target.classList.contains("cf-no")) {
+      row.classList.remove("confirming");
+      const c = row.querySelector(".confirm"); if (c) c.remove();
+      return;
+    }
+    if (row.classList.contains("confirming")) return; // wait for a confirm choice
+
+    if (!row.classList.contains("owned")) { setOwned(name, true); return; } // owning: no prompt
+
+    // Un-owning: confirm first.
+    row.classList.add("confirming");
+    const el = document.createElement("div");
+    el.className = "confirm";
+    el.innerHTML = '<span class="cf-q">Mark not owned?</span>' +
+      '<button class="cf-no">Keep</button><button class="cf-yes">Remove</button>';
+    row.appendChild(el);
   });
 
   // Live updates.
