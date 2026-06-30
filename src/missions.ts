@@ -130,6 +130,9 @@ export class MissionTracker extends EventEmitter {
   /** Manual override from the overlay picker; null = auto-follow. */
   private selectedMissionId: string | null = null;
   private completedMissionIds = new Set<string>();
+  /** Any mission that logged an end (complete/fail/abandon) — dropped from the
+   *  active picker and auto-follow so only missions you currently have show. */
+  private endedMissionIds = new Set<string>();
 
   constructor(opts: MissionTrackerOptions) {
     super();
@@ -245,12 +248,11 @@ export class MissionTracker extends EventEmitter {
         break;
       }
       case "end": {
-        // Don't clear the view on completion — keep the last-tracked mission's pool
-        // visible (so you see what just dropped) until a new mission is tracked.
-        if (ev.missionId === this.trackedMissionId && ev.state.includes("COMPLETED")) {
-          this.completedMissionIds.add(ev.missionId);
-          this.emit("change");
-        }
+        // Any ended mission (complete/fail/abandon) leaves the active set, so the
+        // picker matches what you actually have. COMPLETED also flags the badge.
+        this.endedMissionIds.add(ev.missionId);
+        if (ev.state.includes("COMPLETED")) this.completedMissionIds.add(ev.missionId);
+        this.emit("change");
         break;
       }
       case "blueprintReceived": {
@@ -350,16 +352,22 @@ export class MissionTracker extends EventEmitter {
    *  mission doesn't hide it); falling back to the newest of all. */
   private effectiveMissionId(): string | null {
     if (this.selectedMissionId && this.missions.has(this.selectedMissionId)) return this.selectedMissionId;
-    if (this.trackedMissionId && this.missionHasPool(this.trackedMissionId)) return this.trackedMissionId;
+    const active = (id: string) => !this.endedMissionIds.has(id);
+    if (this.trackedMissionId && active(this.trackedMissionId) && this.missionHasPool(this.trackedMissionId)) {
+      return this.trackedMissionId;
+    }
     for (let i = this.markerSeq.length - 1; i >= 0; i--) {
-      if (this.missionHasPool(this.markerSeq[i])) return this.markerSeq[i];
+      if (active(this.markerSeq[i]) && this.missionHasPool(this.markerSeq[i])) return this.markerSeq[i];
+    }
+    for (let i = this.markerSeq.length - 1; i >= 0; i--) {
+      if (active(this.markerSeq[i])) return this.markerSeq[i];
     }
     return this.trackedMissionId;
   }
 
-  /** Missions seen this session, newest first — for the overlay picker. */
+  /** Active missions (ended ones excluded), newest first — for the overlay picker. */
   private knownMissions(): TrackedView["missions"] {
-    return [...this.markerSeq].reverse().map((id) => {
+    return [...this.markerSeq].reverse().filter((id) => !this.endedMissionIds.has(id)).map((id) => {
       const info = this.missions.get(id);
       const key = info?.contractKey ?? null;
       const title = info?.title || (key && this.dataset?.missions[key]?.title) || key || id;

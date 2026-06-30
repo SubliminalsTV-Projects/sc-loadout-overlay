@@ -254,6 +254,15 @@
     }
   });
 
+  // Electron overlay: report hover so the shell makes the HUD clickable only while
+  // the pointer is over it (clicks pass to the game everywhere else). No-op in OBS.
+  if (window.overlayApi) {
+    const panel = $("panel");
+    let leaveT;
+    panel.addEventListener("mouseenter", () => { clearTimeout(leaveT); window.overlayApi.hover(true); });
+    panel.addEventListener("mouseleave", () => { leaveT = setTimeout(() => window.overlayApi.hover(false), 150); });
+  }
+
   // Live updates.
   const es = new EventSource("/missions/events");
   es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch {} };

@@ -10,7 +10,7 @@
 // game; toggle "Interactive" (tray or Ctrl+Alt+B) to click the picker/buttons.
 // Requires SC in BORDERLESS WINDOWED — overlays can't draw over exclusive fullscreen.
 
-const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, screen, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, globalShortcut, nativeImage, screen, shell, ipcMain } = require("electron");
 const { spawn } = require("node:child_process");
 const http = require("node:http");
 const path = require("node:path");
@@ -25,7 +25,8 @@ let server = null;
 let overlay = null;
 let configWin = null;
 let tray = null;
-let clickThrough = true; // start non-interactive so the game gets clicks
+let hovering = false; // pointer is over the HUD (reported by the page)
+let locked = false; // force click-through always (ignore hover), for uninterrupted play
 
 // ── server lifecycle ────────────────────────────────────────────────────────
 function startServer() {
@@ -108,13 +109,13 @@ function createOverlay() {
     hasShadow: false,
     fullscreenable: false,
     focusable: true,
-    webPreferences: { contextIsolation: true },
+    webPreferences: { contextIsolation: true, preload: path.join(__dirname, "preload.cjs") },
   });
   // Float above borderless fullscreen games.
   overlay.setAlwaysOnTop(true, "screen-saver");
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlay.loadURL(HUD_URL);
-  applyClickThrough();
+  applyMouse();
   overlay.on("moved", saveBounds);
   overlay.on("resize", saveBounds);
   overlay.on("closed", () => {
@@ -122,17 +123,17 @@ function createOverlay() {
   });
 }
 
-function applyClickThrough() {
+function applyMouse() {
   if (!overlay) return;
-  // forward:true still lets hover/scroll reach the page while clicks pass through.
-  overlay.setIgnoreMouseEvents(clickThrough, { forward: true });
+  // Click-through unless the pointer is over the HUD (and not locked). forward:true
+  // keeps mousemove flowing to the page so it can detect enter/leave while ignored.
+  overlay.setIgnoreMouseEvents(locked ? true : !hovering, { forward: true });
 }
 
 // ── actions ─────────────────────────────────────────────────────────────────
-function toggleInteractive() {
-  clickThrough = !clickThrough;
-  applyClickThrough();
-  if (!clickThrough && overlay) overlay.focus();
+function toggleLock() {
+  locked = !locked;
+  applyMouse();
   refreshTray();
 }
 
@@ -175,10 +176,10 @@ function refreshTray() {
     Menu.buildFromTemplate([
       { label: overlay && overlay.isVisible() ? "Hide overlay" : "Show overlay", click: toggleShow },
       {
-        label: "Interactive (allow clicks)",
+        label: "Lock (always click-through)",
         type: "checkbox",
-        checked: !clickThrough,
-        click: toggleInteractive,
+        checked: locked,
+        click: toggleLock,
       },
       { type: "separator" },
       { label: "Verify from logs", click: verifyFromLogs },
@@ -214,8 +215,14 @@ if (!app.requestSingleInstanceLock()) {
     if (!up) console.error("[electron] server did not come up on :" + PORT);
     createOverlay();
     createTray();
-    globalShortcut.register("Control+Alt+B", toggleInteractive); // toggle click-through
+    globalShortcut.register("Control+Alt+L", toggleLock); // lock/unlock click-through
     globalShortcut.register("Control+Alt+H", toggleShow); // show/hide
+  });
+
+  // The HUD page reports hover enter/leave → become clickable only while hovered.
+  ipcMain.on("overlay:hover", (_e, on) => {
+    hovering = !!on;
+    applyMouse();
   });
 
   // Tray app — keep running when the overlay window is closed.
