@@ -6,115 +6,135 @@
 <title>SC Blueprint Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  /* Mission Control design language: gold (#ffb231) primary, warm dark surfaces,
-     glass card + amber hero glow, Space Grotesk headlines / Inter body. */
+  /* Mission Control stream-overlay design language (SC diegetic HUD):
+     navy-teal translucent glass, cyan system chrome, gold value accents, gold
+     corner cradle brackets, cyan diamond glyph, scanlines + visor sheen,
+     Inter (uppercase) labels + monospace numbers, subtle helmet-projection tilt. */
   :root {
-    --text: #e3e2e2; --muted: #d6c4ae; --outline: #9f8e7a; --outline-v: #524534;
-    --surface: #1f2020; --surface-high: #292a2a;
-    --gold: #ffb231; --primary: #ffd7a1; --on-gold: #6d4700; --secondary: #ffb784; --error: #ffb4ab;
-    --glass-bg: rgba(24, 26, 26, 0.82); --glass-border: rgba(255, 255, 255, 0.06);
+    --cyan: #45D0E0; --cyan-bright: #7fe3ef; --cyan-text: #c4dbe6; --cyan-dim: #7fa7bb; --faint: #5d7e90;
+    --gold: #FFD27A; --amber: #F5A623; --green: #2ee6a0; --red: #ff8478;
+    --border: rgba(92, 198, 224, 0.38); --divider: rgba(92, 198, 224, 0.16); --track: #0c1a26;
+    --sans: "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: transparent; }
-  body { font-family: "Inter", system-ui, sans-serif; color: var(--text); }
+  body { font-family: var(--sans); color: var(--cyan-text); }
 
   #panel {
-    position: relative; width: 380px; margin: 12px; border-radius: 18px; overflow: hidden;
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    position: relative; width: 380px; margin: 16px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(13, 27, 40, 0.72), rgba(8, 17, 26, 0.8));
+    border: 1px solid var(--border);
+    box-shadow: inset 0 0 0 1px rgba(92, 198, 224, 0.08), 0 8px 34px rgba(0, 0, 0, 0.45), 0 0 30px rgba(69, 208, 224, 0.16);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    /* subtle helmet-projection tilt (matches the stream overlays) */
+    transform: perspective(1700px) rotateY(4deg) rotateX(1.4deg) skewY(-0.4deg);
+    transform-origin: 60% center;
   }
-  /* Ambient amber glow (MC hero-gradient). */
-  #panel::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(circle at 78% 12%, rgba(255, 178, 49, 0.10), transparent 55%); }
+  /* CRT scanlines */
+  #panel::before { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
+    background: repeating-linear-gradient(0deg, rgba(150, 225, 245, 0.06) 0 1px, transparent 1px 3px); mix-blend-mode: screen; }
+  /* visor sheen */
+  #panel::after { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
+    background: linear-gradient(180deg, rgba(180, 235, 250, 0.09), transparent 36%); }
   #panel.empty .pool, #panel.empty .head .progress { display: none; }
 
-  .head { position: relative; padding: 16px 18px 14px; border-bottom: 1px solid var(--glass-border);
-    /* Drag handle for the Electron overlay (ignored by OBS/browser): move the window
-       by the header while hovering (interactive). */
+  /* Gold corner cradle brackets */
+  .bracket { position: absolute; width: 13px; height: 13px; z-index: 4; pointer-events: none; }
+  .bracket.tl { top: 7px; left: 7px; border-top: 1.4px solid var(--gold); border-left: 1.4px solid var(--gold); }
+  .bracket.tr { top: 7px; right: 7px; border-top: 1.4px solid var(--gold); border-right: 1.4px solid var(--gold); }
+  .bracket.bl { bottom: 7px; left: 7px; border-bottom: 1.4px solid var(--gold); border-left: 1.4px solid var(--gold); }
+  .bracket.br { bottom: 7px; right: 7px; border-bottom: 1.4px solid var(--gold); border-right: 1.4px solid var(--gold); }
+
+  .head { position: relative; padding: 15px 17px 13px; z-index: 2;
+    /* tick-strip data-texture divider under the header */
+    border-bottom: 1px solid var(--divider);
+    /* drag handle for the Electron overlay (move by header while hovering) */
     -webkit-app-region: drag; cursor: grab; }
+  .head::after { content: ""; position: absolute; left: 17px; right: 17px; bottom: -1px; height: 2px;
+    background: repeating-linear-gradient(90deg, rgba(92, 198, 224, 0.32) 0 3px, transparent 3px 8px); opacity: 0.7; }
   #missionPick, .progress { -webkit-app-region: no-drag; }
 
-  .eyebrow { display: flex; align-items: center; gap: 8px; font-family: "Space Grotesk", sans-serif;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold);
-    box-shadow: 0 0 8px rgba(255, 178, 49, 0.7); animation: pulse 1.8s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .eyebrow { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan); }
+  /* diamond glyph */
+  .dot { width: 7px; height: 7px; background: var(--cyan-bright); transform: rotate(45deg);
+    box-shadow: 0 0 8px var(--cyan); animation: pulse 1.9s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-  .title { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 22px; line-height: 1.05;
-    letter-spacing: -0.02em; text-transform: uppercase; margin-top: 8px; color: var(--text); }
-  .sub { margin-top: 4px; font-family: "Space Grotesk", sans-serif; font-size: 10px; font-weight: 600;
-    letter-spacing: 0.18em; text-transform: uppercase; color: rgba(214, 196, 174, 0.55); }
+  .title { font-size: 19px; font-weight: 600; line-height: 1.12; letter-spacing: 0.02em;
+    text-transform: uppercase; margin-top: 9px; color: #eaf6fb; text-shadow: 0 0 14px rgba(69, 208, 224, 0.35); }
+  .sub { margin-top: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--cyan-dim); }
 
-  /* Custom mission dropdown (native <select> popups don't render in a transparent
-     always-on-top window). */
-  #missionPick { display: none; position: relative; margin-top: 10px; }
+  #missionPick { display: none; position: relative; margin-top: 11px; }
   #missionBtn { width: 100%; display: flex; align-items: center; gap: 8px; cursor: pointer;
-    font-family: "Inter", sans-serif; font-size: 13px; font-weight: 600; text-align: left;
-    background: rgba(255, 178, 49, 0.08); color: var(--text);
-    border: 1px solid rgba(255, 178, 49, 0.35); border-radius: 10px; padding: 7px 10px; }
-  #missionBtn:hover { background: rgba(255, 178, 49, 0.16); border-color: rgba(255, 178, 49, 0.6); }
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500; text-align: left;
+    background: rgba(69, 208, 224, 0.08); color: var(--cyan-text);
+    border: 1px solid var(--border); border-radius: 3px; padding: 7px 10px; }
+  #missionBtn:hover { background: rgba(69, 208, 224, 0.16); border-color: var(--cyan); }
   #missionBtnLabel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #missionBtn .caret { color: var(--gold); font-size: 12px; }
-  #missionMenu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
-    background: var(--surface); border: 1px solid var(--glass-border); border-radius: 10px;
+  #missionBtn .caret { color: var(--cyan); font-size: 12px; }
+  #missionMenu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
+    background: #0a1822; border: 1px solid var(--border); border-radius: 3px;
     max-height: 240px; overflow-y: auto; box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); }
   #missionMenu.open { display: block; }
-  #missionMenu .opt { padding: 8px 11px; font-size: 13px; cursor: pointer; color: var(--muted);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+  #missionMenu .opt { padding: 8px 11px; font-size: 12.5px; cursor: pointer; color: var(--cyan-text);
+    border-bottom: 1px solid var(--divider); }
   #missionMenu .opt:last-child { border-bottom: none; }
-  #missionMenu .opt:hover { background: rgba(255, 178, 49, 0.12); color: var(--text); }
-  #missionMenu .opt.active { color: var(--gold); font-weight: 700; }
+  #missionMenu .opt:hover { background: rgba(69, 208, 224, 0.14); }
+  #missionMenu .opt.active { color: var(--cyan-bright); font-weight: 600; }
 
-  .progress { position: absolute; top: 16px; right: 18px; text-align: right; }
-  .progress .frac { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 18px; color: var(--gold); }
-  .progress .lbl { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(214, 196, 174, 0.5); }
-  .completed { margin-top: 8px; display: inline-block; font-family: "Space Grotesk", sans-serif;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold);
-    border: 1px solid rgba(255, 178, 49, 0.5); background: rgba(255, 178, 49, 0.1); padding: 2px 9px; border-radius: 999px; }
+  .progress { position: absolute; top: 15px; right: 17px; text-align: right; }
+  .progress .frac { font-family: var(--mono); font-weight: 500; font-size: 18px; color: var(--gold);
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(255, 210, 122, 0.35); }
+  .progress .lbl { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); }
+  .completed { margin-top: 8px; display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--green); border: 1px solid rgba(46, 230, 160, 0.45);
+    background: rgba(46, 230, 160, 0.1); padding: 2px 9px; border-radius: 3px; }
 
-  .pool { padding: 10px 12px 12px; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 7px 9px; margin-top: 4px; border-radius: 10px;
-    background: rgba(255, 255, 255, 0.025); cursor: pointer; user-select: none; transition: background .15s; }
-  .row:hover { background: rgba(255, 255, 255, 0.06); }
-  .row.owned { background: rgba(255, 178, 49, 0.10); }
-  .mark { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 6px;
-    border: 1px solid var(--outline-v); color: var(--on-gold); font-size: 12px; font-weight: 800; }
-  .row.owned .mark { border-color: var(--gold); background: var(--gold); color: var(--on-gold); }
-  .name { flex: 1; font-size: 14px; font-weight: 500; color: var(--muted); }
-  .row.owned .name { color: var(--text); }
-  .name .ovr { font-size: 10px; color: var(--secondary); margin-left: 6px; letter-spacing: 0.05em; }
-  .chance { flex: none; font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 11px; color: rgba(214, 196, 174, 0.6); }
+  .pool { padding: 9px 11px 11px; position: relative; z-index: 2; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 9px; margin-top: 3px; border-radius: 3px;
+    background: rgba(255, 255, 255, 0.02); cursor: pointer; user-select: none; transition: background .15s; }
+  .row:hover { background: rgba(69, 208, 224, 0.07); }
+  .row.owned { background: linear-gradient(90deg, rgba(69, 208, 224, 0.12), rgba(69, 208, 224, 0.02)); }
+  .mark { flex: none; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 2px;
+    border: 1px solid var(--border); color: var(--cyan-bright); font-size: 12px; font-weight: 700; background: var(--track); }
+  .row.owned .mark { border-color: var(--cyan); background: rgba(69, 208, 224, 0.22); }
+  .name { flex: 1; font-size: 13.5px; font-weight: 500; color: var(--cyan-dim); }
+  .row.owned .name { color: #eaf6fb; }
+  .name .ovr { font-size: 9px; color: var(--gold); margin-left: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .chance { flex: none; font-family: var(--mono); font-weight: 500; font-size: 11px; color: var(--cyan-dim); font-variant-numeric: tabular-nums; }
 
-  .msg { padding: 28px 18px; text-align: center; color: var(--muted); font-size: 14px; }
-  .msg b { color: var(--gold); display: block; font-family: "Space Grotesk", sans-serif;
-    font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+  .msg { padding: 28px 18px; text-align: center; color: var(--cyan-dim); font-size: 13px; position: relative; z-index: 2; }
+  .msg b { color: var(--cyan); display: block; font-weight: 600; font-size: 13px; text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 5px; }
 
-  .foot { padding: 10px 16px 12px; font-size: 11px; color: rgba(214, 196, 174, 0.6);
-    display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--glass-border); }
+  .foot { padding: 9px 16px 11px; font-size: 10px; color: var(--faint); position: relative; z-index: 2;
+    display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--divider); }
   .footrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
-  .foot .patch { color: rgba(214, 196, 174, 0.45); font-size: 10px; }
-  #verify { font-family: "Space Grotesk", sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
-    text-transform: uppercase; cursor: pointer; padding: 4px 11px; border-radius: 8px;
-    border: 1px solid rgba(255, 178, 49, 0.4); color: var(--gold); background: rgba(255, 178, 49, 0.08); }
-  #verify:hover { background: rgba(255, 178, 49, 0.18); }
+  .foot .patch { color: var(--faint); font-family: var(--mono); font-size: 9.5px; }
+  #verify { font-family: var(--sans); font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; cursor: pointer; padding: 4px 11px; border-radius: 3px;
+    border: 1px solid var(--border); color: var(--cyan); background: rgba(69, 208, 224, 0.08); }
+  #verify:hover { background: rgba(69, 208, 224, 0.18); border-color: var(--cyan); }
   #verify:disabled { opacity: .6; cursor: default; }
-  #vstatus { color: var(--gold); font-size: 11px; }
+  #vstatus { color: var(--cyan); font-size: 10px; }
 
   /* Confirm-before-removing (prevents an accidental click un-owning a blueprint). */
-  .row.confirming { background: rgba(255, 180, 171, 0.10); }
+  .row.confirming { background: rgba(255, 132, 120, 0.1); }
   .row .confirm { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .confirm .cf-q { font-size: 11px; color: var(--secondary); white-space: nowrap; }
-  .confirm button { font-family: "Inter", sans-serif; font-size: 11px; font-weight: 700; cursor: pointer;
-    padding: 3px 10px; border-radius: 7px; border: 1px solid var(--outline-v); background: rgba(255, 255, 255, 0.05); color: var(--text); }
-  .confirm .cf-yes { border-color: var(--error); color: var(--error); background: rgba(255, 180, 171, 0.12); }
+  .confirm .cf-q { font-size: 10.5px; color: var(--amber); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em; }
+  .confirm button { font-family: var(--sans); font-size: 10.5px; font-weight: 600; cursor: pointer;
+    padding: 3px 10px; border-radius: 3px; border: 1px solid var(--border); background: rgba(69, 208, 224, 0.08); color: var(--cyan-text); }
+  .confirm .cf-yes { border-color: var(--red); color: var(--red); background: rgba(255, 132, 120, 0.12); }
 </style>
 </head>
 <body>
   <div id="panel" class="empty">
+    <span class="bracket tl"></span><span class="bracket tr"></span><span class="bracket bl"></span><span class="bracket br"></span>
     <div class="head">
       <div class="eyebrow"><span class="dot"></span> Blueprint Pool</div>
       <div class="title" id="title">No mission tracked</div>
