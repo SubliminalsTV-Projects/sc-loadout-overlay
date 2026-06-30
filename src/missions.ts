@@ -237,6 +237,45 @@ export class MissionTracker extends EventEmitter {
     return { owned: false, source: null };
   }
 
+  // ---- subliminal.gg sync helpers ----
+  // The site collection is keyed by output item UUID; the log only yields names,
+  // so map names → UUIDs through the dataset (variant-aware, same as ownership).
+
+  /** Item UUIDs whose blueprint name matches `received` in the current dataset. */
+  itemUuidsForName(received: string): string[] {
+    if (!this.dataset) return [];
+    const out = new Set<string>();
+    for (const mission of Object.values(this.dataset.missions)) {
+      for (const entries of Object.values(mission.pools)) {
+        for (const e of entries) {
+          if (e.item && matchesPoolName(e.blueprint, [received])) out.add(e.item);
+        }
+      }
+    }
+    return [...out];
+  }
+
+  /** Every collected blueprint (observed + owned-overrides) as item UUIDs. */
+  collectedItemUuids(): string[] {
+    const out = new Set<string>();
+    for (const name of this.observed) for (const u of this.itemUuidsForName(name)) out.add(u);
+    for (const [name, val] of this.overrides) {
+      if (val) for (const u of this.itemUuidsForName(name)) out.add(u);
+    }
+    return [...out];
+  }
+
+  /** The tracked mission's dataset key (debug_name), or null. */
+  currentContractKey(): string | null {
+    const t = this.trackedMissionId ? this.missions.get(this.trackedMissionId) : undefined;
+    return t?.contractKey ?? null;
+  }
+
+  /** The detected build changelist (or the loaded dataset's), or null. */
+  currentChangelist(): string | null {
+    return this.detectedChangelist ?? this.dataset?.changelist ?? null;
+  }
+
   // ---- view for the overlay ----
 
   view(): TrackedView {

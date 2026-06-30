@@ -56,6 +56,14 @@
     <div class="hint">Only <em>your</em> ship triggers a switch (the log marks it <code>by player 0</code>). Leave the path as the default unless your install differs.</div>
   </div>
 
+  <div class="card">
+    <div class="label">subliminal.gg Sync</div>
+    <input type="text" id="syncToken" placeholder="scbp_…  paste your token from subliminal.gg/blueprints" />
+    <label class="opt"><input type="checkbox" id="syncEnabled" /> Sync my collection to my subliminal.gg account</label>
+    <div class="hint" id="syncStatus"></div>
+    <div class="hint">Get a token at <a href="https://subliminal.gg/blueprints" target="_blank">subliminal.gg/blueprints</a> → “Connect the desktop tracker”. Received blueprints and the mission you're tracking sync to your account automatically — leave the field blank to keep the saved token.</div>
+  </div>
+
   <div style="margin-top:20px; display:flex; align-items:center;">
     <button class="amber" onclick="save()">Save</button>
     <span class="saved" id="saved">Saved ✓</span>
@@ -71,6 +79,10 @@
     cfg = await (await fetch("/api/config")).json();
     document.getElementById("logPath").value = cfg.logPath || "";
     document.getElementById("autoSwitch").checked = !!cfg.autoSwitch;
+    document.getElementById("syncEnabled").checked = !!cfg.syncEnabled;
+    document.getElementById("syncStatus").textContent = cfg.hasSyncToken
+      ? "Token saved. Leave the field blank to keep it."
+      : "No token yet — paste one to connect.";
     renderList();
   }
 
@@ -112,7 +124,16 @@
   async function save() {
     cfg.logPath = document.getElementById("logPath").value.trim();
     cfg.autoSwitch = document.getElementById("autoSwitch").checked;
-    await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ urls: cfg.urls, logPath: cfg.logPath, autoSwitch: cfg.autoSwitch }) });
+    const body = {
+      urls: cfg.urls,
+      logPath: cfg.logPath,
+      autoSwitch: cfg.autoSwitch,
+      syncEnabled: document.getElementById("syncEnabled").checked,
+    };
+    const token = document.getElementById("syncToken").value.trim();
+    if (token) body.syncToken = token; // only send when typed; blank keeps the saved one
+    await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    document.getElementById("syncToken").value = "";
     const s = document.getElementById("saved"); s.classList.add("show"); setTimeout(() => s.classList.remove("show"), 1400);
     await loadCfg();
   }

@@ -8,6 +8,7 @@ import { LogWatcher } from "./watcher.js";
 import { parseLine } from "./parser.js";
 import { parseMissionEvent } from "./missions-parser.js";
 import { MissionTracker } from "./missions.js";
+import { SiteSync } from "./sync.js";
 import { assetDir } from "./paths.js";
 
 const overlayDir = assetDir(import.meta.url, "overlay");
@@ -20,6 +21,10 @@ interface Config {
   activeUrl: string | null;
   logPath: string;
   autoSwitch: boolean;
+  /** subliminal.gg device token (minted on /blueprints) for collection sync. */
+  syncToken: string;
+  /** Whether to push collected blueprints + tracked mission to subliminal.gg. */
+  syncEnabled: boolean;
 }
 
 const DEFAULTS: Config = {
@@ -27,6 +32,8 @@ const DEFAULTS: Config = {
   activeUrl: "https://www.erkul.games/loadout/Zjbboonv",
   logPath: "C:\\Program Files\\Roberts Space Industries\\StarCitizen\\GAME\\game.log",
   autoSwitch: true,
+  syncToken: "",
+  syncEnabled: false,
 };
 
 let config: Config = existsSync(configPath)
@@ -95,6 +102,33 @@ function broadcastMissions(): void {
   for (const res of missionClients) res.write(data);
 }
 tracker.on("change", broadcastMissions);
+
+// ── subliminal.gg collection sync ────────────────────────────────────────────
+// Pushes received blueprints (resolved name→UUID) + the tracked mission to the
+// player's subliminal.gg account. No-op until a token is configured + enabled.
+const sync = new SiteSync(process.env.SC_SYNC_BASE || "https://subliminal.gg");
+sync.configure(config.syncToken, config.syncEnabled);
+
+let lastSyncedContract: string | null = null;
+function syncMissionIfChanged(): void {
+  const key = tracker.currentContractKey();
+  if (key && key !== lastSyncedContract) {
+    lastSyncedContract = key;
+    sync.setMission(key, tracker.currentChangelist() ?? "");
+  }
+}
+
+// A new receipt → resolve to item UUID(s) and queue; mission marker → push mission.
+tracker.on("collected", (name: string) => sync.addGot(tracker.itemUuidsForName(name)));
+tracker.on("change", syncMissionIfChanged);
+
+/** Push the full collected set + current mission (after a reconnect / token set). */
+function syncFull(): void {
+  if (!sync.active) return;
+  sync.addGot(tracker.collectedItemUuids());
+  lastSyncedContract = null;
+  syncMissionIfChanged();
+}
 
 /** One-time read of the current log so the overlay knows the tracked mission +
  *  collected state immediately on start (the watcher then tails from the end). */
@@ -225,8 +259,10 @@ const server = createServer(async (req, res) => {
         }
       }),
     );
+    // Never echo the raw token back to the page — only whether one is set.
+    const { syncToken, ...rest } = config;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ...config, resolved: urls }));
+    res.end(JSON.stringify({ ...rest, hasSyncToken: !!syncToken, resolved: urls }));
     return;
   }
 
@@ -236,9 +272,16 @@ const server = createServer(async (req, res) => {
     if (Array.isArray(body.urls)) config.urls = body.urls.filter((u: unknown) => typeof u === "string" && u);
     if (typeof body.logPath === "string") config.logPath = body.logPath;
     if (typeof body.autoSwitch === "boolean") config.autoSwitch = body.autoSwitch;
+    // Only overwrite the token when a non-empty one is sent (the page leaves the
+    // field blank to keep the saved token); an explicit "" via clearToken wipes it.
+    if (typeof body.syncToken === "string" && body.syncToken.trim()) config.syncToken = body.syncToken.trim();
+    if (body.clearToken === true) config.syncToken = "";
+    if (typeof body.syncEnabled === "boolean") config.syncEnabled = body.syncEnabled;
     await saveConfig();
     await reindex();
     startWatcher();
+    // Re-arm sync with the new settings and reconcile the full collection.
+    if (sync.configure(config.syncToken, config.syncEnabled)) syncFull();
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
     return;
@@ -282,6 +325,8 @@ server.listen(PORT, async () => {
   console.log(`config page     →  http://localhost:${PORT}/config.html`);
   tracker.loadDataset();
   seedTrackerFromLog();
+  // Push the existing collection + tracked mission once the log has been seeded.
+  syncFull();
   await reindex();
   if (config.activeUrl) await setActive(config.activeUrl, "startup");
   startWatcher();
