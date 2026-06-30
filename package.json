@@ -13,12 +13,14 @@
     "missions-dump": "tsx src/missions-dump.ts",
     "missions-replay": "tsx src/missions-replay.ts",
     "standalone": "tsx src/standalone.ts",
+    "overlay-app": "electron electron/main.cjs",
     "package": "node tools/package.mjs",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "electron": "^43.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
