@@ -28,6 +28,7 @@ let configWin = null;
 let tray = null;
 let hovering = false; // pointer is over the HUD (reported by the page)
 let locked = false; // force click-through always (ignore hover), for uninterrupted play
+let moveMode = false; // reposition mode: fully interactive + drag banner, hover suspended
 
 // ── server lifecycle ────────────────────────────────────────────────────────
 function startServer() {
@@ -134,9 +135,10 @@ function createOverlay() {
 
 function applyMouse() {
   if (!overlay) return;
-  // Click-through unless the pointer is over the HUD (and not locked). forward:true
-  // keeps mousemove flowing to the page so it can detect enter/leave while ignored.
-  overlay.setIgnoreMouseEvents(locked ? true : !hovering, { forward: true });
+  // Move mode = fully interactive (so a drag can't be dropped by hover-toggling).
+  // Otherwise click-through unless the pointer is over the HUD (and not locked).
+  // forward:true keeps mousemove flowing so the page can detect enter/leave.
+  overlay.setIgnoreMouseEvents(moveMode ? false : locked ? true : !hovering, { forward: true });
 }
 
 // ── actions ─────────────────────────────────────────────────────────────────
@@ -144,6 +146,19 @@ function toggleLock() {
   locked = !locked;
   applyMouse();
   refreshTray();
+}
+
+// Reposition mode: whole panel becomes a drag surface (banner + Done in the page),
+// hover-toggling suspended so the window can't slip out from under the cursor.
+function setMoveMode(on) {
+  moveMode = on;
+  applyMouse();
+  if (on && overlay) overlay.focus();
+  overlay?.webContents.send("overlay:move-mode", on);
+  refreshTray();
+}
+function toggleMove() {
+  setMoveMode(!moveMode);
 }
 
 function toggleShow() {
@@ -217,6 +232,10 @@ function refreshTray() {
     Menu.buildFromTemplate([
       { label: overlay && overlay.isVisible() ? "Hide overlay" : "Show overlay", click: toggleShow },
       {
+        label: moveMode ? "Done moving" : "Move overlay…",
+        click: toggleMove,
+      },
+      {
         label: "Lock (always click-through)",
         type: "checkbox",
         checked: locked,
@@ -260,12 +279,17 @@ if (!app.requestSingleInstanceLock()) {
     setupUpdater();
     globalShortcut.register("Control+Alt+L", toggleLock); // lock/unlock click-through
     globalShortcut.register("Control+Alt+H", toggleShow); // show/hide
+    globalShortcut.register("Control+Alt+M", toggleMove); // move/reposition mode
   });
 
   // The HUD page reports hover enter/leave → become clickable only while hovered.
   ipcMain.on("overlay:hover", (_e, on) => {
     hovering = !!on;
     applyMouse();
+  });
+  // The page's "Done" button leaves move mode.
+  ipcMain.on("overlay:end-move", () => {
+    if (moveMode) setMoveMode(false);
   });
 
   // Tray app — keep running when the overlay window is closed.

@@ -48,6 +48,18 @@
     background: linear-gradient(180deg, rgba(180, 235, 250, 0.09), transparent 36%); }
   #panel.empty .pool, #panel.empty .head .progress { display: none; }
 
+  /* Move/reposition mode: whole panel becomes a drag surface with a banner. */
+  #moveBanner { display: none; position: absolute; inset: 0; z-index: 50; -webkit-app-region: drag; cursor: move;
+    background: rgba(69, 208, 224, 0.12); -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
+  #panel.moving #moveBanner { display: flex; align-items: center; justify-content: center; }
+  .movebox { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 4px;
+    border: 1px solid var(--cyan); background: rgba(8, 17, 26, 0.92); color: var(--cyan-text);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  #moveDone { -webkit-app-region: no-drag; cursor: pointer; font-family: var(--sans); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 12px; border-radius: 3px;
+    border: 1px solid var(--cyan); background: rgba(69, 208, 224, 0.15); color: var(--cyan); }
+  #moveDone:hover { background: rgba(69, 208, 224, 0.3); }
+
   /* Gold corner cradle brackets */
   .bracket { position: absolute; width: 13px; height: 13px; z-index: 4; pointer-events: none; }
   .bracket.tl { top: 7px; left: 7px; border-top: 1.4px solid var(--gold); border-left: 1.4px solid var(--gold); }
@@ -143,6 +155,7 @@
 <body>
   <div id="panel" class="empty">
     <span class="bracket tl"></span><span class="bracket tr"></span><span class="bracket bl"></span><span class="bracket br"></span>
+    <div id="moveBanner"><div class="movebox">⠿ Drag anywhere to move<button id="moveDone">Done</button></div></div>
     <div class="head">
       <div class="eyebrow"><span class="dot"></span> Blueprint Pool</div>
       <div class="title" id="title">No mission tracked</div>
@@ -337,6 +350,9 @@
     let leaveT;
     panel.addEventListener("mouseenter", () => { clearTimeout(leaveT); window.overlayApi.hover(true); });
     panel.addEventListener("mouseleave", () => { leaveT = setTimeout(() => window.overlayApi.hover(false), 150); });
+    // Move mode (tray "Move overlay…" / Ctrl+Alt+M): show the drag banner.
+    window.overlayApi.onMoveMode?.((on) => panel.classList.toggle("moving", on));
+    $("moveDone").addEventListener("click", () => window.overlayApi.endMove());
   }
 
   // Toggle base vs adjusted (for-what-you-have) drop odds.
