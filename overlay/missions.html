@@ -200,6 +200,22 @@
   #oddsToggle { letter-spacing: 0.04em; }
   #vstatus { color: var(--cyan); font-size: 10px; }
 
+  /* Mission rewards readout (schema/2): static aUEC payout + ITEM rewards (actual
+     items — Wikelo ships, armor, scrip — not blueprints; display-only, no toggle). */
+  .rew { margin: 0 0 4px; }
+  .rewpay { display: flex; align-items: baseline; gap: 10px; padding: 7px 9px; margin-top: 3px;
+    border: 1px solid rgba(255, 210, 122, 0.35); border-radius: 3px; background: rgba(255, 210, 122, 0.07); }
+  .rewpay .rp-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+  .rewpay .rp-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--gold);
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(255, 210, 122, 0.3); }
+  .rewhead { margin: 8px 3px 1px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--cyan-dim); }
+  .rrow { display: flex; align-items: center; gap: 10px; padding: 6px 9px; margin-top: 3px; border-radius: 3px;
+    background: rgba(255, 255, 255, 0.02); }
+  .rrow .rname { flex: 1; font-size: 13px; font-weight: 500; color: var(--cyan-text); }
+  .rrow .ramt { font-family: var(--mono); font-size: 11px; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .rewnote { margin-top: 7px; padding: 0 3px; font-size: 10.5px; color: var(--faint); }
+
   /* Collapsed "Collected" group: owned blueprints tuck under this toggle so the
      list leads with what you can still GET. Click to expand/collapse. */
   .grphead { display: flex; align-items: center; gap: 8px; margin-top: 9px; padding: 6px 9px; cursor: pointer;
@@ -306,16 +322,29 @@
     $("title").textContent = v.title || v.contractKey;
     $("sub").textContent = (v.generator || "").replace(/_/g, " ");
 
+    const progress = document.querySelector(".progress");
     if (!v.hasPool || !v.pools.length) {
       // Dynamic-event mission (e.g. Return of XenoThreat): show the personal reward
       // ladder instead of "no reward" — what unlocks at each contribution %.
-      if (v.eventTrack) { renderEventTrack(v.eventTrack); return; }
+      if (v.eventTrack) { progress.style.display = ""; renderEventTrack(v.eventTrack); return; }
+      // No blueprints, but the mission pays a known amount and/or hands out ITEMS
+      // (Wikelo ships, armor, scrip): show that instead of a bare "no reward".
+      const rew = rewardsHtml(v);
+      if (rew) {
+        panel.classList.remove("empty");
+        $("msg").innerHTML = "";
+        $("catbar").innerHTML = "";
+        progress.style.display = "none"; // no blueprint progress to count
+        $("pool").innerHTML = rew + '<div class="rewnote">This mission doesn’t drop blueprints.</div>';
+        return;
+      }
       panel.classList.add("empty");
       $("pool").innerHTML = "";
       $("msg").innerHTML = '<div class="msg"><b>No blueprint reward</b>This mission doesn’t drop blueprints.</div>';
       return;
     }
     panel.classList.remove("empty");
+    progress.style.display = "";
     $("msg").innerHTML = "";
     $("frac").textContent = v.totals.owned + "/" + v.totals.total;
 
@@ -353,9 +382,10 @@
 
     // Lead with what you can still GET; everything owned tucks into a collapsed
     // "Collected" group at the bottom (click to expand — rows stay toggleable).
+    // A pooled mission with a known payout / item rewards shows those up top.
     const need = ordered.filter((it) => !it.owned);
     const have = ordered.filter((it) => it.owned);
-    let html = need.map(rowHtml).join("");
+    let html = rewardsHtml(v) + need.map(rowHtml).join("");
     if (have.length) {
       html += '<div class="grphead" id="ownedHead" title="' + (ownedOpen ? "Hide" : "Show") + ' the blueprints you already own">' +
         '<span class="car">' + (ownedOpen ? "▾" : "▸") + "</span>Collected" +
@@ -425,6 +455,34 @@
 
   function escapeHtml(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
   function escapeAttr(s){return s.replace(/"/g,"&quot;");}
+
+  // Static payout as display text, or null. Most missions are runtime-calculated
+  // (no static amount in the game data) — those stay silent rather than guessing.
+  // min 0/null = "up to max"; MER = prison merits.
+  function payoutText(p) {
+    if (!p || !p.max) return null;
+    const cur = (p.currency || "").toUpperCase() === "MER" ? "merits" : "aUEC";
+    const n = (x) => Number(x).toLocaleString();
+    if (p.min && p.min !== p.max) return n(p.min) + "–" + n(p.max) + " " + cur;
+    if (!p.min) return "up to " + n(p.max) + " " + cur;
+    return n(p.max) + " " + cur;
+  }
+
+  // Payout line + ITEM rewards (actual items — not blueprints; display-only).
+  function rewardsHtml(v) {
+    const parts = [];
+    const pay = payoutText(v.payout);
+    if (pay) parts.push('<div class="rewpay"><span class="rp-lbl">Payout</span><span class="rp-val">' + escapeHtml(pay) + "</span></div>");
+    const items = v.itemRewards || [];
+    if (items.length) {
+      parts.push('<div class="rewhead">Item rewards</div>');
+      for (const it of items) {
+        parts.push('<div class="rrow"><span class="rname">' + escapeHtml(it.name) + "</span>" +
+          (it.amount > 1 ? '<span class="ramt">×' + it.amount + "</span>" : "") + "</div>");
+      }
+    }
+    return parts.length ? '<div class="rew">' + parts.join("") + "</div>" : "";
+  }
 
   // Mission-complete summary card: payout, time taken, blueprints received. Shown
   // for ~30s over the completed mission, then the overlay moves to the next one.

@@ -33,6 +33,12 @@ export interface DatasetMission {
   generatorClass: string;
   missionKey: string;
   pools: Record<string, PoolEntry[]>;
+  /** Static aUEC payout (schema/2). Most missions are runtime-calculated → null.
+   *  min is often 0, meaning "up to max". Currency is UEC or MER (prison merits). */
+  payout?: { min: number | null; max: number; currency: string | null } | null;
+  /** ITEM rewards the mission hands out (schema/2) — actual items (Wikelo ships,
+   *  armor, scrip), NOT blueprints. No ownership tracking; display-only. */
+  items?: { name: string; item: string | null; amount: number }[] | null;
 }
 export interface Dataset {
   schema: string;
@@ -81,6 +87,11 @@ export interface TrackedView {
   title: string | null;
   generator: string | null;
   hasPool: boolean;
+  /** Static aUEC payout for the shown mission, or null (most payouts are
+   *  runtime-calculated and unknown statically). min 0/null = "up to max". */
+  payout: { min: number | null; max: number; currency: string | null } | null;
+  /** ITEM rewards (not blueprints) the shown mission hands out. Display-only. */
+  itemRewards: { name: string; amount: number }[];
   /** True once the tracked mission has logged a COMPLETED end. */
   completed: boolean;
   pools: { poolUuid: string; blueprints: BlueprintStatus[] }[];
@@ -587,16 +598,25 @@ export class MissionTracker extends EventEmitter {
     this.emit("change");
   }
 
-  private missionHasPool(missionId: string): boolean {
+  /** Dataset entry for a mission id, or undefined. Since schema/2 the missions map
+   *  also holds pool-LESS missions that carry a payout or item rewards. */
+  private datasetMission(missionId: string): DatasetMission | undefined {
     const key = this.missions.get(missionId)?.contractKey;
-    return !!(key && this.dataset?.missions[key]);
+    return key ? this.dataset?.missions[key] : undefined;
   }
 
-  /** Has something to show: a blueprint pool OR a dynamic-event reward ladder
-   *  (XenoThreat). Lets the mission you're actively on display its ladder instead
-   *  of falling behind an older pooled mission. */
+  private missionHasPool(missionId: string): boolean {
+    const m = this.datasetMission(missionId);
+    return !!m && Object.keys(m.pools ?? {}).length > 0;
+  }
+
+  /** Has something to show: a blueprint pool, a payout / item-reward readout, OR a
+   *  dynamic-event reward ladder (XenoThreat). Lets the mission you're actively on
+   *  display its info instead of falling behind an older pooled mission. */
   private missionHasContent(missionId: string): boolean {
     if (this.missionHasPool(missionId)) return true;
+    const m = this.datasetMission(missionId);
+    if (m && (m.payout || (m.items?.length ?? 0) > 0)) return true;
     const info = this.missions.get(missionId);
     return isXenoThreatMission(info?.contractKey ?? null, info?.generator ?? null);
   }
@@ -765,7 +785,7 @@ export class MissionTracker extends EventEmitter {
     let owned = 0;
     let total = 0;
     if (mission) {
-      for (const [poolUuid, entries] of Object.entries(mission.pools)) {
+      for (const [poolUuid, entries] of Object.entries(mission.pools ?? {})) {
         const blueprints: BlueprintStatus[] = entries.map((e) => {
           const o = this.isOwned(e.blueprint);
           if (o.owned) owned++;
@@ -779,9 +799,10 @@ export class MissionTracker extends EventEmitter {
 
     // XenoThreat (and other pool-less event missions): show the personal reward
     // ladder instead of "no blueprint reward". Owned status matches by name via the
-    // observed set (the log's "Received Blueprint" lines).
+    // observed set (the log's "Received Blueprint" lines). Keyed off pool CONTENT —
+    // since schema/2 an event mission can have a (pool-less) dataset entry.
     let eventTrack: EventTrack | null = null;
-    if (!mission && isXenoThreatMission(key, tracked?.generator ?? null)) {
+    if (pools.length === 0 && isXenoThreatMission(key, tracked?.generator ?? null)) {
       eventTrack = {
         name: "Return of XenoThreat",
         note: XENOTHREAT_NOTE,
@@ -801,7 +822,9 @@ export class MissionTracker extends EventEmitter {
       contractKey: key,
       title: mission?.title ?? tracked?.title ?? null,
       generator: tracked?.generator ?? mission?.generatorClass ?? null,
-      hasPool: !!mission,
+      hasPool: pools.length > 0,
+      payout: mission?.payout ?? null,
+      itemRewards: (mission?.items ?? []).map((i) => ({ name: i.name, amount: Number(i.amount) || 1 })),
       eventTrack,
       completed: holdActive || (effectiveId ? this.completedMissionIds.has(effectiveId) : false),
       pools,
