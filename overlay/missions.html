@@ -178,11 +178,15 @@
   .evhead .dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
   .evnote { margin: 0 3px 8px; padding: 7px 9px; font-size: 10.5px; line-height: 1.4; color: var(--cyan-text);
     background: rgba(69, 208, 224, 0.06); border: 1px solid var(--divider); border-radius: 4px; }
-  .evtier { display: flex; align-items: center; gap: 9px; margin: 11px 3px 4px; }
+  .evtier { display: flex; align-items: center; gap: 9px; margin: 11px 3px 4px; cursor: pointer;
+    user-select: none; padding: 2px 3px; border-radius: 3px; transition: background .12s; }
+  .evtier:hover { background: rgba(69, 208, 224, 0.07); }
+  .evtier .evcar { color: var(--cyan); font-size: 9px; }
   .evtier .evpct { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--gold);
     font-variant-numeric: tabular-nums; }
   .evtier .evbar { flex: 1; height: 1px; background: var(--divider); }
   .evtier .evcount { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .evtier.done .evcount { color: var(--green); }
 
   .msg { padding: 28px 18px; text-align: center; color: var(--cyan-dim); font-size: 13px; position: relative; z-index: 2; }
   .msg b { color: var(--cyan); display: block; font-weight: 600; font-size: 13px; text-transform: uppercase;
@@ -278,6 +282,9 @@
   // Whether the collapsed "Collected" (owned) group at the bottom of the pool is
   // expanded. Collapsed by default so the list leads with what you still need.
   let ownedOpen = false;
+  // Event-ladder tier expand/collapse overrides, keyed by tier pct. Default (no
+  // entry): fully-collected tiers collapse, incomplete tiers stay open.
+  const evOpen = {};
 
   // The 10 in-game fabricator filter tabs, in game order. Mirrors src/categories.ts
   // (the overlay is standalone HTML with no bundler; keep the two in sync). Icons are
@@ -438,8 +445,16 @@
     ];
     for (const tier of track.tiers) {
       const tOwned = tier.items.filter((i) => i.owned).length;
-      html.push('<div class="evtier"><span class="evpct">' + tier.pct + '%</span><span class="evbar"></span>' +
+      const done = tOwned === tier.items.length;
+      // Collapsed tiers hide their rows: completed tiers tuck away by default so the
+      // ladder leads with what's still missing; click a tier header to toggle.
+      const open = tier.pct in evOpen ? evOpen[tier.pct] : !done;
+      html.push('<div class="evtier' + (done ? " done" : "") + '" data-pct="' + tier.pct + '" data-open="' + (open ? 1 : 0) +
+        '" title="' + (open ? "Collapse" : "Expand") + ' this tier">' +
+        '<span class="evcar">' + (open ? "▾" : "▸") + '</span>' +
+        '<span class="evpct">' + tier.pct + '%</span><span class="evbar"></span>' +
         '<span class="evcount">' + tOwned + "/" + tier.items.length + "</span></div>");
+      if (!open) continue;
       for (const it of tier.items) {
         const ovr = it.source === "manual" ? '<span class="ovr">[manual]</span>' : "";
         html.push(
@@ -548,6 +563,13 @@
     // The "Collected" group header toggles the owned rows open/closed.
     if (e.target.closest("#ownedHead")) {
       ownedOpen = !ownedOpen;
+      if (current) render(current);
+      return;
+    }
+    // An event-ladder tier header toggles that tier's reward rows.
+    const tierEl = e.target.closest(".evtier");
+    if (tierEl) {
+      evOpen[tierEl.getAttribute("data-pct")] = tierEl.getAttribute("data-open") !== "1";
       if (current) render(current);
       return;
     }
