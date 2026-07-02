@@ -407,10 +407,12 @@ export class MissionTracker extends EventEmitter {
         // Reserved for finer tracked-mission detection; markers already cover it.
         break;
 
-      case "sessionStart": {
-        // Joined/re-entered the PU — the previous shard's missions no longer apply
-        // (they're not active here and SC won't log their end). Wipe the whole active
-        // set so stale missions don't linger; it rebuilds from this shard's markers.
+      case "sessionStart":
+      case "sessionEnd": {
+        // Joined/re-entered the PU (or left it — quit to menu, disconnect, client
+        // exit). Either way the previous shard's missions no longer apply (they're
+        // not active here and SC won't log their end). Wipe the whole active set so
+        // stale missions don't linger; it rebuilds from the next shard's markers.
         this.resetSession();
         this.emit("change");
         break;

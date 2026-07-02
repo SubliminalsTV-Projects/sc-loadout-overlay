@@ -45,6 +45,8 @@ const fmt = (e: MissionEvent): string => {
       return `BLUEPRINT  «${e.name}»  (mission ${short(e.missionId)})`;
     case "sessionStart":
       return `SESSION  (PU entered / server change)`;
+    case "sessionEnd":
+      return `SESSION  (left game — quit / disconnect)`;
   }
 };
 

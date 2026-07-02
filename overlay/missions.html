@@ -200,6 +200,17 @@
   #oddsToggle { letter-spacing: 0.04em; }
   #vstatus { color: var(--cyan); font-size: 10px; }
 
+  /* Collapsed "Collected" group: owned blueprints tuck under this toggle so the
+     list leads with what you can still GET. Click to expand/collapse. */
+  .grphead { display: flex; align-items: center; gap: 8px; margin-top: 9px; padding: 6px 9px; cursor: pointer;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan-dim);
+    border: 1px solid var(--divider); border-radius: 3px; background: rgba(69, 208, 224, 0.04);
+    user-select: none; transition: background .12s, border-color .12s; }
+  .grphead:hover { background: rgba(69, 208, 224, 0.1); border-color: var(--cyan); color: var(--cyan-text); }
+  .grphead .car { color: var(--cyan); font-size: 9px; }
+  .grphead .gcnt { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--gold);
+    font-variant-numeric: tabular-nums; }
+
   /* Confirm-before-removing (prevents an accidental click un-owning a blueprint). */
   .row.confirming { background: rgba(255, 132, 120, 0.1); }
   .row .confirm { display: flex; align-items: center; gap: 6px; margin-left: auto; }
@@ -248,6 +259,9 @@
   let oddsMode = "base";
   // Active fabricator category filter (null = All). Set by the icon filter bar.
   let activeTab = null;
+  // Whether the collapsed "Collected" (owned) group at the bottom of the pool is
+  // expanded. Collapsed by default so the list leads with what you still need.
+  let ownedOpen = false;
 
   // The 10 in-game fabricator filter tabs, in game order. Mirrors src/categories.ts
   // (the overlay is standalone HTML with no bundler; keep the two in sync). Icons are
@@ -336,7 +350,19 @@
     // filtered/unfiltered list stays visually tidy.
     const shown = activeTab ? items.filter((it) => it.tab === activeTab) : items;
     const ordered = TABS.flatMap((tab) => shown.filter((it) => it.tab === tab.key));
-    $("pool").innerHTML = ordered.map(rowHtml).join("");
+
+    // Lead with what you can still GET; everything owned tucks into a collapsed
+    // "Collected" group at the bottom (click to expand — rows stay toggleable).
+    const need = ordered.filter((it) => !it.owned);
+    const have = ordered.filter((it) => it.owned);
+    let html = need.map(rowHtml).join("");
+    if (have.length) {
+      html += '<div class="grphead" id="ownedHead" title="' + (ownedOpen ? "Hide" : "Show") + ' the blueprints you already own">' +
+        '<span class="car">' + (ownedOpen ? "▾" : "▸") + "</span>Collected" +
+        '<span class="gcnt">' + have.length + "/" + ordered.length + "</span></div>";
+      if (ownedOpen) html += have.map(rowHtml).join("");
+    }
+    $("pool").innerHTML = html;
   }
 
   // One blueprint row (odds already computed into b.oddsP).
@@ -461,6 +487,12 @@
   // Marking owned is one click; UN-marking asks first, so an accidental click while
   // looking at an item can't silently wipe a blueprint you actually own.
   $("pool").addEventListener("click", (e) => {
+    // The "Collected" group header toggles the owned rows open/closed.
+    if (e.target.closest("#ownedHead")) {
+      ownedOpen = !ownedOpen;
+      if (current) render(current);
+      return;
+    }
     const row = e.target.closest(".row");
     if (!row || !current) return;
     const name = row.getAttribute("data-name");

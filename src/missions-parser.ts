@@ -53,7 +53,10 @@ export type MissionEvent =
   | { kind: "blueprintReceived"; ts: string | null; name: string; missionId: string | null }
   /** Entered/re-entered the persistent universe (login / server change) — the
    *  previous shard's tracked-mission selection no longer applies. */
-  | { kind: "sessionStart"; ts: string | null };
+  | { kind: "sessionStart"; ts: string | null }
+  /** Left the game — quit to menu, disconnect, or full client exit. Mission state
+   *  is per-connection, so the overlay should stop showing the old shard's missions. */
+  | { kind: "sessionEnd"; ts: string | null };
 
 const UUID = "[0-9a-fA-F-]{36}";
 
@@ -154,6 +157,18 @@ export function parseMissionEvent(e: LogEvent): MissionEvent | null {
     case "Context Establisher Done": {
       return /map="?megamap"?/i.test(m) ? { kind: "sessionStart", ts: e.timestamp } : null;
     }
+
+    // Left the PU shard — quit to menu, disconnect, or full client quit
+    // ("<Channel Destroyed> map="megamap" ..."). A mid-session server hop destroys
+    // the channel too, but the rejoin's Context Establisher Done resets state anyway.
+    case "Channel Destroyed": {
+      return /map="?megamap"?/i.test(m) ? { kind: "sessionEnd", ts: e.timestamp } : null;
+    }
+
+    // Hard client exit ("<SystemQuit> CSystem::Quit invoked ..."). Belt-and-braces
+    // for a quit where the channel-destroyed line doesn't make it into the log.
+    case "SystemQuit":
+      return { kind: "sessionEnd", ts: e.timestamp };
 
     default:
       return null;
