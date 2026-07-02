@@ -680,21 +680,22 @@ export class MissionTracker extends EventEmitter {
     return exact.size ? [...exact] : [...baseItems];
   }
 
-  /** Item UUID(s) for a received blueprint name. Mission pools are the canonical drop
-   *  source, so they're tried first; the global blueprint `index` is the fallback so a
-   *  receipt from a non-pool source (dynamic-event tier rewards — XenoThreat Purgatory
-   *  camo, etc.) still resolves to its item and syncs, instead of counting toward the
-   *  collected total but mapping to nothing. */
+  /** Item UUID(s) for a received blueprint name. Resolved over mission pools AND the
+   *  global blueprint `index` TOGETHER so that an EXACT match always beats a prefix
+   *  match, regardless of which set it came from. This matters for camo/variant items:
+   *  "Testudo Arms Purgatory Camo" has its own exact entry in the index, but a mission
+   *  pool also carries the base "Testudo Arms" — resolving pools first would prefix-match
+   *  the base and sync the WRONG item's UUID. Combining lets the exact variant win; only
+   *  a variant with no exact entry anywhere falls back to its longest base prefix. */
   itemUuidsForName(received: string): string[] {
     if (!this.dataset) return [];
     const target = norm(received);
-    const poolEntries: { name: string; item: string | null }[] = [];
+    const entries: { name: string; item: string | null }[] = [];
     for (const mission of Object.values(this.dataset.missions))
-      for (const entries of Object.values(mission.pools))
-        for (const e of entries) poolEntries.push({ name: e.blueprint, item: e.item });
-    const fromPools = this.resolveName(target, poolEntries);
-    if (fromPools.length) return fromPools;
-    return this.dataset.index?.length ? this.resolveName(target, this.dataset.index) : [];
+      for (const pool of Object.values(mission.pools))
+        for (const e of pool) entries.push({ name: e.blueprint, item: e.item });
+    if (this.dataset.index) for (const e of this.dataset.index) entries.push({ name: e.name, item: e.item });
+    return this.resolveName(target, entries);
   }
 
   /** Every collected blueprint (observed + owned-overrides) as item UUIDs. */
