@@ -52,12 +52,14 @@
   <div class="card">
     <div class="label">Game Log + Auto-Switch</div>
     <div class="add">
-      <input type="text" id="logPath" placeholder="path to game.log" />
+      <input type="text" id="logPath" placeholder="…\StarCitizen\LIVE\game.log" />
+      <button onclick="chooseLog()">Browse…</button>
       <button onclick="detectLog()">Detect</button>
     </div>
+    <div id="logWarn" class="hint" style="display:none; color:#ffb4a8"></div>
     <div id="detected" class="hint"></div>
     <label class="opt"><input type="checkbox" id="autoSwitch" /> Auto-switch the overlay when I spawn a ship in-game</label>
-    <div class="hint">Click <strong>Detect</strong> to find your Star Citizen install and pick the channel you play (LIVE / PTU / EPTU / etc.). It auto-selects the one you played most recently; click another below to switch.</div>
+    <div class="hint">Pick the <strong>game.log file itself</strong> — the actual file, <em>not</em> the folder it's in. It lives inside your channel folder, e.g. <code>…\StarCitizen\LIVE\game.log</code>. Click <strong>Browse…</strong> to select the file, or <strong>Detect</strong> to auto-find your install and choose your channel (LIVE / PTU / EPTU / …).</div>
   </div>
 
   <div class="card">
@@ -103,6 +105,7 @@
   async function loadCfg() {
     cfg = await (await fetch("/api/config")).json();
     document.getElementById("logPath").value = cfg.logPath || "";
+    checkLogPath();
     document.getElementById("autoSwitch").checked = !!cfg.autoSwitch;
     document.getElementById("hwAccel").checked = !!cfg.hwAccel;
     document.getElementById("amdCompat").checked = !!cfg.amdCompat;
@@ -193,6 +196,23 @@
   }
   function clearBinding() { document.getElementById("bindingPng").value = ""; save(); }
 
+  async function chooseLog() {
+    if (!window.overlayConfig || !window.overlayConfig.pickLog) { alert("File picker unavailable — update the app."); return; }
+    const p = await window.overlayConfig.pickLog(document.getElementById("logPath").value.trim());
+    if (p) { document.getElementById("logPath").value = p; checkLogPath(); save(); }
+  }
+  // Warn when the path looks like a folder (doesn't end in a .log file) — the common mistake.
+  function checkLogPath() {
+    const v = document.getElementById("logPath").value.trim();
+    const warn = document.getElementById("logWarn");
+    if (v && !/\.log$/i.test(v)) {
+      warn.textContent = "⚠ That looks like a folder, not a file. Select the game.log file itself.";
+      warn.style.display = "";
+    } else {
+      warn.style.display = "none";
+    }
+  }
+
   // In-game overlay master switch — app-only (controlled live via the shell over IPC,
   // separate from the server config + Save button). Hidden when opened in a plain browser.
   function initOverlayToggle() {
@@ -207,6 +227,7 @@
     oc.onOverlayEnabledChanged && oc.onOverlayEnabledChanged((on) => { box.checked = !!on; });
   }
 
+  document.getElementById("logPath").addEventListener("input", checkLogPath);
   loadCfg();
   initOverlayToggle();
 </script>

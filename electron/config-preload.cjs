@@ -5,6 +5,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("overlayConfig", {
   pickPng: () => ipcRenderer.invoke("pick-png"),
+  // Native open-FILE dialog for the game.log path (passes the current value as the start dir).
+  pickLog: (current) => ipcRenderer.invoke("pick-log", current),
   // Master overlay switch (crash workaround) — controlled live via the shell, not the
   // sidecar config, so toggling destroys/creates the HUD window immediately.
   getOverlayEnabled: () => ipcRenderer.invoke("overlay:get-enabled"),

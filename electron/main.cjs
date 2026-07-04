@@ -510,6 +510,21 @@ if (!app.requestSingleInstanceLock()) {
     return overlayEnabled;
   });
 
+  // Native FILE picker for the game.log path — an open-FILE dialog (not a folder), filtered
+  // to .log, so users select the actual game.log rather than the directory it lives in.
+  ipcMain.handle("pick-log", async (_e, current) => {
+    const r = await dialog.showOpenDialog(configWin ?? undefined, {
+      title: "Select your game.log file",
+      defaultPath: typeof current === "string" && current ? current : undefined,
+      filters: [
+        { name: "Star Citizen log (game.log)", extensions: ["log"] },
+        { name: "All files", extensions: ["*"] },
+      ],
+      properties: ["openFile"],
+    });
+    return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
+  });
+
   // The HUD page reports hover enter/leave → become clickable only while hovered.
   ipcMain.on("overlay:hover", (_e, on) => {
     hovering = !!on;
