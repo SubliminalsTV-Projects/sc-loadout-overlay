@@ -234,6 +234,29 @@ function toggleBinding() {
   bindingWin.showInactive();
 }
 
+// Live-rebindable global shortcut for the binding-chart overlay — swap it WITHOUT a restart.
+// Returns {ok:true} or {ok:false,error} so the config window can warn (invalid combo, or the
+// combo is already claimed by another app).
+let bindingAccel = null;
+function registerBindingHotkey(accel) {
+  try {
+    if (bindingAccel) globalShortcut.unregister(bindingAccel);
+  } catch {
+    /* ignore */
+  }
+  bindingAccel = null;
+  if (!accel || typeof accel !== "string") return { ok: true };
+  try {
+    if (globalShortcut.register(accel, toggleBinding)) {
+      bindingAccel = accel;
+      return { ok: true };
+    }
+    return { ok: false, error: "in_use" };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  }
+}
+
 // ── actions ─────────────────────────────────────────────────────────────────
 function toggleLock() {
   locked = !locked;
@@ -482,14 +505,14 @@ if (!app.requestSingleInstanceLock()) {
     globalShortcut.register("Control+Alt+L", toggleLock); // lock/unlock click-through
     globalShortcut.register("Control+Alt+H", toggleShow); // show/hide
     globalShortcut.register("Control+Alt+M", toggleMove); // move/reposition mode
-    // Binding-chart PNG overlay — hotkey from config (change needs a restart).
-    let bindKey = "CommandOrControl+Alt+K";
+    // Binding-chart PNG overlay hotkey — from config, live-rebindable from the config window.
+    let bindKey = "Control+Alt+Shift+K";
     try {
       const p = path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker", "config.json");
       const c = JSON.parse(fs.readFileSync(p, "utf8"));
       if (c.bindingHotkey) bindKey = c.bindingHotkey;
     } catch { /* default */ }
-    try { globalShortcut.register(bindKey, toggleBinding); } catch { /* bad accelerator */ }
+    registerBindingHotkey(bindKey);
   });
 
   // Native PNG picker for the config window (renderers can't open OS dialogs).
@@ -524,6 +547,11 @@ if (!app.requestSingleInstanceLock()) {
     });
     return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
   });
+
+  // Live-apply a captured binding-chart hotkey (config window), no restart. Persistence is
+  // handled separately by the config save; this just (re)registers the global shortcut.
+  ipcMain.handle("set-binding-hotkey", (_e, accel) =>
+    registerBindingHotkey(typeof accel === "string" ? accel : ""));
 
   // The HUD page reports hover enter/leave → become clickable only while hovered.
   ipcMain.on("overlay:hover", (_e, on) => {

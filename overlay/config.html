@@ -40,6 +40,8 @@
   a { color: var(--cyan); }
   .saved { color: var(--amber); font-size: 13px; margin-left: 10px; opacity: 0; transition: opacity .2s; }
   .saved.show { opacity: 1; }
+  .hkbtn { min-width: 170px; }
+  .hkbtn.capturing { border-color: var(--amber); color: var(--amber); background: rgba(255,178,62,.14); }
 </style>
 </head>
 <body>
@@ -84,8 +86,11 @@
       <button onclick="chooseBinding()">Choose PNG…</button>
       <button class="danger" onclick="clearBinding()" title="Remove">✕</button>
     </div>
-    <label class="opt" style="margin-top:12px;">Hotkey <input type="text" id="bindingHotkey" style="max-width:220px" placeholder="CommandOrControl+Alt+K" /></label>
-    <div class="hint">Pick a PNG (transparency supported — e.g. your joystick binding chart) and press the hotkey in-game to toggle it full-screen over gameplay. It's click-through, so it won't interfere. <em>Changing the hotkey requires restarting the app.</em></div>
+    <label class="opt" style="margin-top:12px;">Hotkey
+      <button type="button" id="hotkeyBtn" class="hkbtn" onclick="startCaptureHotkey()">Ctrl + Alt + Shift + K</button>
+      <input type="hidden" id="bindingHotkey" />
+    </label>
+    <div class="hint" id="hotkeyHint">Pick a PNG (transparency supported — e.g. your joystick binding chart) and press the hotkey in-game to toggle it full-screen over gameplay (click-through, won't interfere). To change the hotkey, click the button and press your combination — include Ctrl, Alt, or Shift. <strong>Applies immediately, no restart.</strong> Avoid a combo Star Citizen already uses.</div>
   </div>
 
   <div class="card">
@@ -117,7 +122,7 @@
     document.getElementById("hwAccel").checked = !!cfg.hwAccel;
     document.getElementById("amdCompat").checked = !!cfg.amdCompat;
     document.getElementById("bindingPng").value = cfg.bindingPng || "";
-    document.getElementById("bindingHotkey").value = cfg.bindingHotkey || "CommandOrControl+Alt+K";
+    setHotkeyDisplay(cfg.bindingHotkey || "Control+Alt+Shift+K");
     document.getElementById("syncEnabled").checked = !!cfg.syncEnabled;
     document.getElementById("syncStatus").textContent = cfg.hasSyncToken
       ? "Token saved. Leave the field blank to keep it."
@@ -170,7 +175,7 @@
       hwAccel: document.getElementById("hwAccel").checked,
       amdCompat: document.getElementById("amdCompat").checked,
       bindingPng: document.getElementById("bindingPng").value,
-      bindingHotkey: document.getElementById("bindingHotkey").value.trim() || "CommandOrControl+Alt+K",
+      bindingHotkey: document.getElementById("bindingHotkey").value.trim() || "Control+Alt+Shift+K",
       syncEnabled: document.getElementById("syncEnabled").checked,
     };
     const token = document.getElementById("syncToken").value.trim();
@@ -202,6 +207,67 @@
     if (p) { document.getElementById("bindingPng").value = p; save(); }
   }
   function clearBinding() { document.getElementById("bindingPng").value = ""; save(); }
+
+  // ── binding-chart hotkey: click-to-capture, live-applied ─────────────────
+  let capturingHotkey = false;
+  function prettyHotkey(accel) {
+    return (accel || "").split("+").map(p => p === "Control" ? "Ctrl" : p === "Super" ? "Win" : p).join(" + ");
+  }
+  function setHotkeyDisplay(accel) {
+    document.getElementById("bindingHotkey").value = accel;
+    document.getElementById("hotkeyBtn").textContent = prettyHotkey(accel);
+  }
+  function startCaptureHotkey() {
+    capturingHotkey = true;
+    const btn = document.getElementById("hotkeyBtn");
+    btn.textContent = "Press keys…  (Esc cancels)";
+    btn.classList.add("capturing");
+  }
+  // KeyboardEvent.code → Electron accelerator key token (layout-independent for QWERTY).
+  function hkKeyName(code) {
+    let m;
+    if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
+    if ((m = /^Digit([0-9])$/.exec(code))) return m[1];
+    if (/^F([0-9]{1,2})$/.test(code)) return code;
+    return ({ Semicolon: ";", Quote: "'", Comma: ",", Period: ".", Slash: "/", Backslash: "\\",
+      BracketLeft: "[", BracketRight: "]", Minus: "-", Equal: "=", Backquote: "`",
+      Space: "Space", Tab: "Tab", ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right" })[code] || null;
+  }
+  window.addEventListener("keydown", async (e) => {
+    if (!capturingHotkey) return;
+    e.preventDefault(); e.stopPropagation();
+    const btn = document.getElementById("hotkeyBtn");
+    const hint = document.getElementById("hotkeyHint");
+    if (e.key === "Escape") {
+      capturingHotkey = false; btn.classList.remove("capturing");
+      setHotkeyDisplay(document.getElementById("bindingHotkey").value);
+      return;
+    }
+    if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) return; // wait for the non-modifier key
+    const mods = [];
+    if (e.ctrlKey) mods.push("Control");
+    if (e.altKey) mods.push("Alt");
+    if (e.shiftKey) mods.push("Shift");
+    if (e.metaKey) mods.push("Super");
+    const key = hkKeyName(e.code);
+    capturingHotkey = false; btn.classList.remove("capturing");
+    if (!key || !mods.length) {
+      setHotkeyDisplay(document.getElementById("bindingHotkey").value);
+      hint.innerHTML = "⚠ Use at least one modifier (Ctrl / Alt / Shift) plus a key. Try again.";
+      return;
+    }
+    const accel = [...mods, key].join("+");
+    setHotkeyDisplay(accel);
+    let res = { ok: true };
+    if (window.overlayConfig && window.overlayConfig.setBindingHotkey) res = await window.overlayConfig.setBindingHotkey(accel);
+    if (res && res.ok === false) {
+      hint.innerHTML = "⚠ Couldn't register <b>" + prettyHotkey(accel) + "</b> — " +
+        (res.error === "in_use" ? "another app is already using it." : "invalid combo.") + " Pick another.";
+    } else {
+      hint.textContent = "Set to " + prettyHotkey(accel) + " — applied. Click the button to change it.";
+    }
+    save();
+  });
 
   async function chooseLog() {
     if (!window.overlayConfig || !window.overlayConfig.pickLog) { alert("File picker unavailable — update the app."); return; }

@@ -62,7 +62,7 @@ const DEFAULTS: Config = {
   hwAccel: false,
   amdCompat: false,
   bindingPng: "",
-  bindingHotkey: "CommandOrControl+Alt+K",
+  bindingHotkey: "Control+Alt+Shift+K",
 };
 
 function loadConfig(): Config {
