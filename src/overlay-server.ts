@@ -40,6 +40,10 @@ interface Config {
    *  a transparent window over a Vulkan game and crashes AMD drivers; software rendering
    *  is safe. Read by electron/main.cjs at startup (needs an app restart to change). */
   hwAccel: boolean;
+  /** AMD compatibility mode (opt-in, restart-required). Forces the transparent HUD fully off
+   *  the Windows GPU-compositing path (DirectComposition/MPO) that crashes AMD Vulkan with a
+   *  device-lost, and loads the lite (no-blur/animation) HUD skin. Read by main.cjs at startup. */
+  amdCompat: boolean;
   /** Absolute path to a PNG (with transparency) to show as a toggleable full-screen
    *  reference overlay — e.g. your joystick binding chart. Empty = feature off. */
   bindingPng: string;
@@ -56,6 +60,7 @@ const DEFAULTS: Config = {
   syncToken: "",
   syncEnabled: false,
   hwAccel: false,
+  amdCompat: false,
   bindingPng: "",
   bindingHotkey: "CommandOrControl+Alt+K",
 };
@@ -446,6 +451,7 @@ const server = createServer(async (req, res) => {
     if (typeof body.syncEnabled === "boolean") config.syncEnabled = body.syncEnabled;
     // GPU accel is read by electron/main.cjs at startup; persist here, restart applies it.
     if (typeof body.hwAccel === "boolean") config.hwAccel = body.hwAccel;
+    if (typeof body.amdCompat === "boolean") config.amdCompat = body.amdCompat;
     if (typeof body.bindingPng === "string") config.bindingPng = body.bindingPng;
     if (typeof body.bindingHotkey === "string" && body.bindingHotkey.trim()) config.bindingHotkey = body.bindingHotkey.trim();
     await saveConfig();

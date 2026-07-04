@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SC Blueprint Tracker</title>
+<script>/* AMD compatibility: apply the lite skin BEFORE first paint (no flash) when the shell asks for it. */
+  if (new URLSearchParams(location.search).has("lite")) document.documentElement.classList.add("amd-lite");</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -47,6 +49,17 @@
   #panel::after { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
     background: linear-gradient(180deg, rgba(180, 235, 250, 0.09), transparent 36%); }
   #panel.empty .pool, #panel.empty .catbar, #panel.empty .head .progress { display: none; }
+
+  /* AMD compatibility "lite" skin (added on <html> via ?lite): strip everything that forces
+     continuous GPU recompositing over the game's Vulkan surface — backdrop blur, the blend-mode
+     scanlines/sheen, the 3D helmet tilt, and all animations. These cross-surface composite ops
+     are the transparent-overlay-on-AMD device-lost/TDR trigger. Panel bg goes near-opaque so
+     text stays legible without the blur. */
+  html.amd-lite #panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    background: rgba(8, 17, 26, 0.95) !important; transform: none !important; }
+  html.amd-lite #panel::before, html.amd-lite #panel::after { display: none !important; }
+  html.amd-lite #moveBanner { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.amd-lite *, html.amd-lite *::before, html.amd-lite *::after { animation: none !important; transition: none !important; }
 
   /* Move/reposition mode: whole panel becomes a drag surface with a banner. */
   #moveBanner { display: none; position: absolute; inset: 0; z-index: 50; -webkit-app-region: drag; cursor: move;

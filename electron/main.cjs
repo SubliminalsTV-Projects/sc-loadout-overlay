@@ -31,7 +31,29 @@ function hwAccelEnabled() {
     return false; // default OFF (crash-safe)
   }
 }
-if (!hwAccelEnabled()) app.disableHardwareAcceleration();
+// AMD compatibility mode (opt-in, restart-required). Even with hardware acceleration off, the
+// transparent HUD is still GPU-COMPOSITED by Windows via DirectComposition + Multiplane Overlay
+// (MPO) over the game's Vulkan swapchain — disableHardwareAcceleration stops GPU *rendering* of
+// the page, not GPU *compositing* of the window. That DComp/MPO surface presenting over an AMD
+// Vulkan present is the device-lost/TDR crash. This mode forces the window fully off the GPU
+// compositing path (software compositing, no occlusion polling) AND loads the lite HUD skin
+// (see AMD_COMPAT in createOverlay). See the AMD-tester crash log: STATUS_CRYENGINE_GPU_CRASH.
+function amdCompatEnabled() {
+  try {
+    const p = path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker", "config.json");
+    return JSON.parse(fs.readFileSync(p, "utf8")).amdCompat === true;
+  } catch {
+    return false;
+  }
+}
+const AMD_COMPAT = amdCompatEnabled();
+if (AMD_COMPAT) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("disable-gpu-compositing");
+  app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+} else if (!hwAccelEnabled()) {
+  app.disableHardwareAcceleration();
+}
 
 // Master overlay switch, persisted in its OWN file (the sidecar owns config.json and
 // rewrites it on unrelated changes, which would clobber a flag stored there). Default ON.
@@ -166,7 +188,8 @@ function createOverlay() {
   overlay.setAlwaysOnTop(true, "screen-saver");
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   // Clear any cached copy + cache-bust the URL so UI changes always show up.
-  overlay.webContents.session.clearCache().finally(() => overlay.loadURL(`${HUD_URL}?v=${Date.now()}`));
+  const hudUrl = `${HUD_URL}?v=${Date.now()}${AMD_COMPAT ? "&lite=1" : ""}`;
+  overlay.webContents.session.clearCache().finally(() => overlay.loadURL(hudUrl));
   applyMouse();
   overlay.on("moved", saveBounds);
   overlay.on("resize", saveBounds);

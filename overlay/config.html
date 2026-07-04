@@ -83,6 +83,8 @@
     <div class="label">Overlay Performance</div>
     <label class="opt" id="overlayShowRow" style="display:none"><input type="checkbox" id="overlayShow" /> Show the in-game overlay</label>
     <div class="hint" id="overlayShowHint" style="display:none">Turn this <strong>off</strong> if the overlay crashes your game. Blueprint tracking and collection sync keep running without it — you just lose the on-screen panel. Takes effect immediately, no restart. <em>Tip: the binding-chart hotkey (Ctrl+Alt+K) opens another overlay window, so leave that off too while testing.</em></div>
+    <label class="opt"><input type="checkbox" id="amdCompat" /> AMD compatibility mode</label>
+    <div class="hint">On an <strong>AMD</strong> GPU and the game crashes (Vulkan "device lost") when the overlay is up? Turn this on. It forces the overlay fully off the GPU and switches to a simplified, no-blur panel — which stops that crash while keeping the overlay visible. Slightly plainer look, a little more CPU. <em>Requires restarting the app.</em></div>
     <label class="opt"><input type="checkbox" id="hwAccel" /> Use GPU hardware acceleration</label>
     <div class="hint"><strong>Off by default.</strong> The overlay renders on the CPU, which avoids crashes some GPUs (especially AMD) hit when the overlay runs over the game. Turn this on only if you have GPU headroom and don't get crashes. <em>Changing this requires restarting the app.</em></div>
   </div>
@@ -103,6 +105,7 @@
     document.getElementById("logPath").value = cfg.logPath || "";
     document.getElementById("autoSwitch").checked = !!cfg.autoSwitch;
     document.getElementById("hwAccel").checked = !!cfg.hwAccel;
+    document.getElementById("amdCompat").checked = !!cfg.amdCompat;
     document.getElementById("bindingPng").value = cfg.bindingPng || "";
     document.getElementById("bindingHotkey").value = cfg.bindingHotkey || "CommandOrControl+Alt+K";
     document.getElementById("syncEnabled").checked = !!cfg.syncEnabled;
@@ -155,6 +158,7 @@
       logPath: cfg.logPath,
       autoSwitch: cfg.autoSwitch,
       hwAccel: document.getElementById("hwAccel").checked,
+      amdCompat: document.getElementById("amdCompat").checked,
       bindingPng: document.getElementById("bindingPng").value,
       bindingHotkey: document.getElementById("bindingHotkey").value.trim() || "CommandOrControl+Alt+K",
       syncEnabled: document.getElementById("syncEnabled").checked,
