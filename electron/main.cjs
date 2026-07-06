@@ -16,6 +16,7 @@ const http = require("node:http");
 const path = require("node:path");
 const fs = require("node:fs");
 const { autoUpdater } = require("electron-updater");
+const { startFabCapture } = require("./capture.cjs");
 
 // GPU hardware acceleration is OFF by default: the HUD is a transparent, always-on-top
 // window composited over a fullscreen Vulkan game (Star Citizen), and GPU-compositing it
@@ -538,6 +539,8 @@ if (!app.requestSingleInstanceLock()) {
     } catch { /* defaults */ }
     registerOverlayHotkey(overlayKey);
     registerBindingHotkey(bindKey);
+    // Opt-in fabricator screen-capture loop (config.fabCapture). No-op until enabled.
+    startFabCapture({ port: PORT, configDir: path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker") });
   });
 
   // Native PNG picker for the config window (renderers can't open OS dialogs).

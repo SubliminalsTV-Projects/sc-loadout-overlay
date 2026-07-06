@@ -10,6 +10,7 @@ import { parseMissionEvent } from "./missions-parser.js";
 import { MissionTracker } from "./missions.js";
 import { SiteSync } from "./sync.js";
 import { assetDir } from "./paths.js";
+import { loadCatalog, readScreenshot, type CatalogEntry } from "./screen-read.js";
 
 const overlayDir = assetDir(import.meta.url, "overlay");
 const bundledDataDir = assetDir(import.meta.url, "data");
@@ -210,6 +211,8 @@ async function setActive(url: string, reason: string): Promise<boolean> {
 // remoteBaseUrl: pull a patch's pool data from subliminal.gg if it isn't bundled
 // (offline-first — always falls back to the shipped data/ files).
 const tracker = new MissionTracker({ dataDir, remoteBaseUrl: "https://subliminal.gg/sc" });
+// Name->UUID catalog for the screen-read OCR endpoint; loaded lazily on first use.
+let screenCatalog: CatalogEntry[] | null = null;
 const missionClients = new Set<ServerResponse>();
 function broadcastMissions(): void {
   const data = `data: ${JSON.stringify(tracker.view())}\n\n`;
@@ -388,6 +391,21 @@ const server = createServer(async (req, res) => {
     }
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  // Screen OCR — Electron main captures a full screenshot to a temp file and posts its
+  // path here; we OCR it and report whether the fabricator (which item) or a tracked
+  // mission is on screen. Main then crops+uploads the item render / follows the mission.
+  if (url === "/api/screen-read" && req.method === "POST") {
+    const body = await readBody(req);
+    let result: unknown = { kind: "none" };
+    if (typeof body.path === "string" && body.path) {
+      if (!screenCatalog) screenCatalog = loadCatalog(dataDir);
+      result = await readScreenshot(body.path, screenCatalog);
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(result));
     return;
   }
 
