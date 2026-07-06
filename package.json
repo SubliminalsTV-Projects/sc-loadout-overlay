@@ -13,6 +13,7 @@
     "agent": "tsx src/agent.ts",
     "missions-dump": "tsx src/missions-dump.ts",
     "missions-replay": "tsx src/missions-replay.ts",
+    "screen-read-dump": "tsx src/screen-read-dump.ts",
     "standalone": "tsx src/standalone.ts",
     "overlay-app": "electron electron/main.cjs",
     "package": "node tools/package.mjs",
