@@ -17,51 +17,15 @@ Setup + run (see README.md):
   .venv/Scripts/python bgremove.py --in <crops> --out out --upload --token scbp_...
 """
 import argparse
-import io
 import json
 import os
 import sys
 import urllib.request
 
-from PIL import Image, ImageFilter
-from rembg import new_session, remove
+from PIL import Image
+from rembg import new_session
 
-MAX_BYTES = 600 * 1024  # site ingest cap
-
-
-def strip(img, session, erode):
-    """teal-bg RGB image -> transparent RGBA render."""
-    cut = remove(
-        img.convert("RGB"),
-        session=session,
-        alpha_matting=True,                       # estimate true foreground -> removes teal spill
-        alpha_matting_foreground_threshold=240,
-        alpha_matting_background_threshold=15,
-        alpha_matting_erode_size=8,
-        post_process_mask=True,
-    )
-    if erode > 0:  # optional extra fringe shave for stubborn halos
-        a = cut.getchannel("A").filter(ImageFilter.MinFilter(erode * 2 + 1))
-        a = a.filter(ImageFilter.GaussianBlur(0.6))
-        cut.putalpha(a)
-    return cut
-
-
-def autocrop(cut, thresh=8, pad_px=0, pad_frac=0.0):
-    """Trim transparent margin to the item, then add a transparent border. bbox is taken
-    over alpha > thresh (ignores near-invisible matting noise). Padding = pad_px plus
-    pad_frac of the item's larger side (proportional → even framing across item sizes)."""
-    mask = cut.getchannel("A").point(lambda v: 255 if v > thresh else 0)
-    bbox = mask.getbbox()
-    if not bbox:
-        return cut
-    item = cut.crop(bbox)
-    p = pad_px + round(max(item.size) * pad_frac)
-    if p <= 0:
-        return item
-    canvas = Image.new("RGBA", (item.size[0] + 2 * p, item.size[1] + 2 * p), (0, 0, 0, 0))
-    canvas.paste(item, (p, p))
-    return canvas
+from core import MAX_BYTES, autocrop, strip, to_webp
 
 
 def main():
@@ -96,9 +60,7 @@ def main():
         cut = strip(Image.open(os.path.join(args.indir, f)), session, args.erode)
         if args.autocrop:
             cut = autocrop(cut, pad_px=args.pad, pad_frac=args.pad_pct)
-        buf = io.BytesIO()
-        cut.save(buf, format="WEBP", quality=args.quality, method=6)
-        data = buf.getvalue()
+        data = to_webp(cut, args.quality)
         with open(os.path.join(args.outdir, uuid + ".webp"), "wb") as fh:
             fh.write(data)
 

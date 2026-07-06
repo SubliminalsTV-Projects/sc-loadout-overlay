@@ -11,3 +11,7 @@ build/server/
 
 # personal runtime config (erkul URLs + sync token) — seeded from DEFAULTS, stored in %APPDATA%
 overlay/config.json
+
+# python bytecode (tools/fab-bgremove)
+__pycache__/
+*.pyc
