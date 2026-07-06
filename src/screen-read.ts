@@ -115,8 +115,50 @@ export function loadCatalog(dataDir: string): CatalogEntry[] {
   return ds.index ?? [];
 }
 
-/** Resolve an OCR'd name to a catalog item: exact-normalized first, then a
- *  Jaccard token-overlap fallback (guards against an OCR letter glitch). */
+// Character-bigram Dice coefficient — tolerant of OCR letter glitches inside a token
+// (e.g. "(S2)" misread as "62)"), unlike whole-word overlap.
+function bigrams(s: string): Map<string, number> {
+  const t = s.replace(/ /g, "");
+  const m = new Map<string, number>();
+  for (let i = 0; i < t.length - 1; i++) {
+    const b = t.slice(i, i + 2);
+    m.set(b, (m.get(b) || 0) + 1);
+  }
+  return m;
+}
+function dice(a: Map<string, number>, b: Map<string, number>): number {
+  let inter = 0, total = 0;
+  for (const v of a.values()) total += v;
+  for (const [k, v] of b) {
+    total += v;
+    if (a.has(k)) inter += Math.min(v, a.get(k)!);
+  }
+  return total ? (2 * inter) / total : 0;
+}
+
+/** Pick the winner from scored candidates (sorted desc). A clear top wins; a near-tie is
+ *  disambiguated only by digits the OCR actually saw (size variants S1/S2/S3), else null —
+ *  never guess between equally-likely candidates. */
+function pickBest(
+  scored: { e: CatalogEntry; s: number }[],
+  minScore: number,
+  n: string,
+): CatalogEntry | null {
+  const top = scored[0];
+  if (!top || top.s < minScore) return null;
+  const near = scored.filter((x) => top.s - x.s < 0.04);
+  if (near.length === 1) return top.e;
+  const seen = new Set(n.match(/\d/g) || []);
+  const picks = near.filter((x) => {
+    const d = normName(x.e.name).match(/\d/g) || [];
+    return d.length > 0 && d.every((dd) => seen.has(dd));
+  });
+  return picks.length === 1 ? picks[0].e : null;
+}
+
+/** Resolve an OCR'd name to a catalog item: exact-normalized, then whole-word overlap,
+ *  then a character-bigram fallback for glitched tags — both tie-safe (an ambiguous read
+ *  returns none, never a guess) and variant-aware (picks S1/S2/S3 by the OCR's digits). */
 export function resolveName(
   raw: string,
   catalog: CatalogEntry[],
@@ -124,18 +166,26 @@ export function resolveName(
   const n = normName(raw);
   if (!n) return { name: null, item: null, match: "none" };
   for (const e of catalog) if (normName(e.name) === n) return { name: e.name, item: e.item, match: "exact" };
+
   const nt = new Set(n.split(" "));
-  let best: CatalogEntry | null = null, bestScore = 0;
-  for (const e of catalog) {
-    const kt = new Set(normName(e.name).split(" "));
-    const inter = [...nt].filter((t) => kt.has(t)).length;
-    const uni = new Set([...nt, ...kt]).size;
-    const score = uni ? inter / uni : 0;
-    if (score > bestScore) { bestScore = score; best = e; }
-  }
-  return bestScore >= 0.6 && best
-    ? { name: best.name, item: best.item, match: "fuzzy" }
-    : { name: null, item: null, match: "none" };
+  const jaccard = catalog
+    .map((e) => {
+      const kt = new Set(normName(e.name).split(" "));
+      const inter = [...nt].filter((t) => kt.has(t)).length;
+      const uni = new Set([...nt, ...kt]).size;
+      return { e, s: uni ? inter / uni : 0 };
+    })
+    .sort((a, b) => b.s - a.s);
+  let w = pickBest(jaccard, 0.6, n);
+  if (w) return { name: w.name, item: w.item, match: "fuzzy" };
+
+  // Character-bigram fallback for OCR glitches in short tags (e.g. "(S2)" -> "62)").
+  const nb = bigrams(n);
+  const diceScored = catalog
+    .map((e) => ({ e, s: dice(nb, bigrams(normName(e.name))) }))
+    .sort((a, b) => b.s - a.s);
+  w = pickBest(diceScored, 0.7, n);
+  return w ? { name: w.name, item: w.item, match: "fuzzy" } : { name: null, item: null, match: "none" };
 }
 
 // ---- Layout extraction --------------------------------------------------------
