@@ -97,3 +97,12 @@ All fields except `raw` and `message` are nullable / may be empty — plain line
 - `src/parser.ts` — `parseLine(raw)` → `LogEvent`. Pure, no I/O.
 - `src/watcher.ts` — `LogWatcher`, the tailer + emitter.
 - `src/index.ts`  — demo entry point.
+
+## License
+
+Copyright © 2026 SubliminalsTV. The source is public so you can see how the tracker
+works and contribute improvements, but it is **not** open source — it's licensed under
+the [PolyForm Strict License 1.0.0](LICENSE.md). You may read the code and submit pull
+requests; you may not redistribute it, ship a modified or rebranded build, or use it
+commercially without written permission. Contributions are welcome and, once merged,
+are covered by the same license.

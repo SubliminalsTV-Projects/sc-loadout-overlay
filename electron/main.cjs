@@ -486,6 +486,10 @@ function refreshTray() {
           }]
         : [{ label: "Check for updates…", click: checkForUpdatesManual }]),
       { label: `Version ${app.getVersion()}`, enabled: false },
+      {
+        label: "View source on GitHub",
+        click: () => shell.openExternal("https://github.com/SubliminalsTV-Projects/sc-loadout-overlay"),
+      },
       { type: "separator" },
       { label: "Quit", click: () => app.quit() },
     ]),

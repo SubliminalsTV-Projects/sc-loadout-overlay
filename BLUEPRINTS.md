@@ -6,7 +6,7 @@ watcher as the loadout overlay.
 
 The log tells us which contract you're tracking and which blueprints you *receive*, but
 never the full pool — so the pool comes from a bundled per-patch dataset exported from the
-sc-api game database (see [`data/README.md`](data/README.md)).
+SC game database. The datasets ship in `data/` (see the schema notes in `src/missions.ts`).
 
 ## Run it
 
@@ -38,16 +38,13 @@ Distribute the whole `dist/` folder. End users double-click the exe — it start
 server and opens the blueprint window. OBS users add the `localhost:8778/missions.html`
 source. No Node, no Electron, no install.
 
-## Updating data each patch (homelab)
+## Datasets
 
-The bundled datasets are generated from the self-hosted sc-api:
-
-```bash
-tools/build-blueprint-data.sh    # regenerate data/blueprints.<changelist>.json
-```
-
-Optionally set `remoteBaseUrl` on the `MissionTracker` to a public dataset endpoint so the
-app pulls new patches without re-shipping (offline-first; always falls back to bundled).
+The per-patch blueprint pool datasets are bundled in `data/` (`blueprints.<changelist>.json`).
+The app auto-detects the running patch and loads the matching one, falling back to the newest
+bundled dataset. Optionally set `remoteBaseUrl` on the `MissionTracker` to a public dataset
+endpoint so the app pulls new patches without re-shipping (offline-first; always falls back to
+bundled).
 
 ## Pieces
 
@@ -58,7 +55,7 @@ app pulls new patches without re-shipping (offline-first; always falls back to b
 | `overlay/missions.html` | the diegetic HUD panel |
 | `src/overlay-server.ts` | serves `/missions.html`, `/missions/events` (SSE), `/api/missions`, `/api/missions/own` |
 | `src/standalone.ts` | desktop launcher (server + app-mode window) |
-| `data/` + `tools/build-blueprint-data.*` | per-patch blueprint pool datasets + generator |
+| `data/` | per-patch blueprint pool datasets (bundled) |
 
 ### Dev tools
 
