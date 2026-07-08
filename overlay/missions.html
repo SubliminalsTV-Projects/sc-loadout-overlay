@@ -75,7 +75,7 @@
 
   /* Grab handle: a discoverable "move" affordance that fades in on hover (Electron
      only). Clicking it drops into move mode — the reliable, hover-suspended drag. */
-  #grip { display: none; position: absolute; top: 9px; right: 11px; z-index: 20;
+  #grip { display: none; position: absolute; top: 9px; right: 44px; z-index: 20;
     align-items: center; gap: 5px; padding: 3px 8px; border-radius: 3px;
     -webkit-app-region: no-drag; cursor: grab; user-select: none;
     border: 1px solid var(--border); background: rgba(8, 17, 26, 0.72); color: var(--cyan);
@@ -86,6 +86,47 @@
   #panel.electron:hover #grip { opacity: 0.85; }
   #grip:hover { opacity: 1 !important; background: rgba(69, 208, 224, 0.2); }
   #panel.moving #grip { display: none; }
+
+  /* Settings cog (top-right) — hover-revealed like the grip, so the resting overlay stays
+     clean. Opens the declutter menu (hide odds / verify / category bar) + OCR status. */
+  #cog { position: absolute; top: 8px; right: 11px; z-index: 22; -webkit-app-region: no-drag;
+    width: 25px; height: 25px; display: grid; place-items: center; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 4px; background: rgba(8, 17, 26, 0.72);
+    color: var(--cyan); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s ease; }
+  #panel:hover #cog, #cog.open { opacity: 0.9; }
+  #cog:hover { opacity: 1; background: rgba(69, 208, 224, 0.2); }
+  #panel.moving #cog { display: none; }
+  #cogMenu { display: none; position: absolute; top: 37px; right: 11px; z-index: 31; width: 232px;
+    -webkit-app-region: no-drag; background: #0a1822; border: 1px solid var(--border); border-radius: 4px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); padding: 6px 0 8px; }
+  #cogMenu.open { display: block; }
+  #cogMenu .cog-sec { font-family: var(--sans); font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--cyan-dim); padding: 8px 12px 4px; }
+  #cogMenu .cog-opt { display: flex; align-items: center; gap: 9px; padding: 6px 12px; cursor: pointer;
+    font-family: var(--sans); font-size: 12px; color: var(--cyan-text); }
+  #cogMenu .cog-opt:hover { background: rgba(69, 208, 224, 0.12); }
+  #cogMenu .cog-opt input { width: 15px; height: 15px; accent-color: var(--cyan); cursor: pointer; }
+  #cogMenu .cog-ocr { padding: 2px 12px 4px; font-size: 10.5px; line-height: 1.55; color: var(--cyan-dim); }
+  #cogMenu .cog-ocr b { color: var(--cyan-text); font-weight: 600; }
+  #cogMenu .cog-ocr .ocr-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle; background: var(--faint); }
+  #cogMenu .cog-ocr.on .ocr-dot { background: var(--cyan-bright); box-shadow: 0 0 6px var(--cyan); }
+
+  /* Cog declutter toggles: hide footer odds/verify buttons + the category filter bar. */
+  #panel.hide-odds #oddsToggle { display: none; }
+  #panel.hide-verify #verify { display: none; }
+  #panel.hide-catbar .catbar { display: none; }
+
+  /* Transient OCR activity toast (item captured / mission read). Never blocks clicks. */
+  #ocrToast { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%) translateY(6px);
+    z-index: 40; pointer-events: none; max-width: 86%; box-sizing: border-box;
+    display: flex; align-items: center; gap: 8px; padding: 7px 13px;
+    background: rgba(10, 24, 34, 0.94); border: 1px solid var(--cyan); border-radius: 20px;
+    font-family: var(--sans); font-size: 11.5px; color: var(--cyan-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), 0 0 16px rgba(69, 208, 224, 0.18) inset;
+    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; }
+  #ocrToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .head { position: relative; padding: 15px 17px 13px; z-index: 10;
     /* tick-strip data-texture divider under the header */
@@ -354,6 +395,16 @@
     </div>
     <div class="head">
       <div id="grip" title="Move overlay"><span class="dots">⠿</span>Move</div>
+      <div id="cog" title="Overlay settings">⚙</div>
+      <div id="cogMenu">
+        <div class="cog-sec">Overlay</div>
+        <label class="cog-opt"><input type="checkbox" id="tgOdds" /> Show odds toggle</label>
+        <label class="cog-opt"><input type="checkbox" id="tgVerify" /> Show “Verify from logs”</label>
+        <label class="cog-opt"><input type="checkbox" id="tgCatbar" /> Show category filter bar</label>
+        <div class="cog-sec">OCR</div>
+        <label class="cog-opt"><input type="checkbox" id="tgMissionOcr" /> Scan for pinned mission</label>
+        <div class="cog-ocr" id="ocrStat"><span class="ocr-dot"></span><b>OCR idle</b></div>
+      </div>
       <div class="eyebrow"><span class="dot"></span> Blueprint Pool</div>
       <div class="title" id="title">No mission tracked</div>
       <div class="sub" id="sub"></div>
@@ -378,6 +429,7 @@
         <span class="patch" id="patch"></span>
       </div>
     </div>
+    <div id="ocrToast"></div>
   </div>
 
 <script>
@@ -417,7 +469,16 @@
   ];
 
   // User prefs sent with the mission view (config-driven). Updated in render().
-  let PREFS = { timeRelative: true };
+  // Defaults mirror the server so odds/verify start hidden (cleaner) with no first-paint flash.
+  let PREFS = { timeRelative: true, hideOdds: true, hideVerify: true, hideCatbar: false, missionOcr: false };
+  // Apply the declutter prefs (hide footer odds/verify + category bar) via panel classes,
+  // so they compose with the empty-state rules instead of fighting inline styles.
+  function applyPrefs() {
+    const p = $("panel");
+    p.classList.toggle("hide-odds", !!PREFS.hideOdds);
+    p.classList.toggle("hide-verify", !!PREFS.hideVerify);
+    p.classList.toggle("hide-catbar", !!PREFS.hideCatbar);
+  }
 
   // Time label parts from an ISO stamp: absolute date+clock (the "date and timestamp")
   // plus a relative "2h ago" hint. The time-format setting picks which one to show.
@@ -469,7 +530,7 @@
 
   function render(v) {
     current = v;
-    if (v.prefs) PREFS = v.prefs;
+    if (v.prefs) { PREFS = v.prefs; applyPrefs(); }
     const panel = $("panel");
     // Show the dataset version, and flag when the player's actual build isn't the one
     // we have data for (pools are an approximation from the same family).
@@ -907,6 +968,78 @@
     $("oddsToggle").textContent = "odds: " + (oddsMode === "base" ? "base" : "mine");
     if (current) render(current);
   });
+
+  // ── Settings cog: declutter toggles + OCR status ──────────────────────────
+  function setCog(open) {
+    $("cogMenu").classList.toggle("open", open);
+    $("cog").classList.toggle("open", open);
+    if (open) {
+      $("tgOdds").checked = !PREFS.hideOdds;
+      $("tgVerify").checked = !PREFS.hideVerify;
+      $("tgCatbar").checked = !PREFS.hideCatbar;
+      $("tgMissionOcr").checked = !!PREFS.missionOcr;
+      updateOcr();
+      window.overlayApi?.setModal?.(true);
+      window.overlayApi?.hover?.(true);
+    } else {
+      window.overlayApi?.setModal?.(false);
+    }
+  }
+  $("cog").addEventListener("click", (e) => { e.stopPropagation(); setCog(!$("cogMenu").classList.contains("open")); });
+  $("cogMenu").addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => { if ($("cogMenu").classList.contains("open")) setCog(false); });
+  // A toggle: flip the pref, apply it locally now, and persist it (broadcasts to OBS too).
+  function setPref(patch) {
+    Object.assign(PREFS, patch);
+    applyPrefs();
+    fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
+      .catch(() => { /* best-effort; the local apply already took effect */ });
+  }
+  $("tgOdds").addEventListener("change", () => setPref({ hideOdds: !$("tgOdds").checked }));
+  $("tgVerify").addEventListener("change", () => setPref({ hideVerify: !$("tgVerify").checked }));
+  $("tgCatbar").addEventListener("change", () => setPref({ hideCatbar: !$("tgCatbar").checked }));
+  // Mission-name OCR on/off — read by the capture loop each poll (not a display pref).
+  $("tgMissionOcr").addEventListener("change", () => { setPref({ missionOcr: $("tgMissionOcr").checked }); updateOcr(); });
+
+  // OCR activity (fabricator image capture + pinned-mission read). Fed by the Electron
+  // shell over IPC; a no-op in OBS browser-source mode (no overlayApi).
+  let OCR = { state: "", lastMission: "", lastCapture: "" };
+  let ocrToastT;
+  function showOcrToast(text) {
+    const el = $("ocrToast");
+    el.textContent = text; el.classList.add("show");
+    clearTimeout(ocrToastT); ocrToastT = setTimeout(() => el.classList.remove("show"), 4200);
+  }
+  function updateOcr() {
+    const el = $("ocrStat");
+    const active = OCR.state === "watching" || OCR.state === "settling";
+    el.classList.toggle("on", active);
+    let head;
+    if (OCR.state === "idle") head = "Waiting for Star Citizen…";
+    else if (OCR.state === "settling") head = "Reading item…";
+    else if (active) head = "Watching Star Citizen…";
+    else head = "OCR off — turn on scanning above";
+    let html = '<span class="ocr-dot"></span><b>' + head + "</b>";
+    if (OCR.lastMission) html += "<br>Mission read: " + escapeHtml(OCR.lastMission);
+    if (OCR.lastCapture) html += "<br>Last image: " + escapeHtml(OCR.lastCapture);
+    el.innerHTML = html;
+  }
+  function onOcrEvent(s) {
+    if (!s || !s.state) return;
+    if (s.state === "mission") {
+      OCR.state = "watching";
+      if (s.title) { OCR.lastMission = s.title; showOcrToast("🎯 " + s.title); }
+    } else if (s.state === "captured") {
+      OCR.state = "watching";
+      if (s.name) { OCR.lastCapture = s.name; showOcrToast("📸 " + s.name + (s.uploaded ? " · shared" : " · saved")); }
+    } else {
+      OCR.state = s.state; // off / idle / watching / settling
+    }
+    updateOcr();
+  }
+  window.overlayApi?.onOcr?.(onOcrEvent);
+
+  applyPrefs();
 
   // Live updates.
   const es = new EventSource("/missions/events");

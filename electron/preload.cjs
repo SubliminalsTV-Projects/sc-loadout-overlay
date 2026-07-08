@@ -15,4 +15,6 @@ contextBridge.exposeInMainWorld("overlayApi", {
   // While a modal (what's-new card) is open, keep the HUD hover-interactive even when
   // "locked" — so the card is always closeable while the game runs.
   setModal: (on) => ipcRenderer.send("overlay:modal", !!on),
+  // OCR activity from the fabricator/mission capture loop → the cog's status readout + toasts.
+  onOcr: (cb) => ipcRenderer.on("overlay:ocr", (_e, s) => cb(s)),
 });

@@ -116,12 +116,18 @@ function readConfig(configDir) {
   catch { return {}; }
 }
 
-/** Start the opt-in capture loop. `configDir` = the %APPDATA%/sc-blueprint-tracker dir. */
-function startFabCapture({ port, configDir }) {
+/** Start the opt-in capture loop. `configDir` = the %APPDATA%/sc-blueprint-tracker dir.
+ *  `onStatus(s)` (optional) reports OCR activity to the overlay: {state} for
+ *  off/idle/watching/settling, or {state:"mission",title} / {state:"captured",name,uploaded}. */
+function startFabCapture({ port, configDir, onStatus }) {
   const captureDir = path.join(configDir, "fab-captures");
   const shotsDir = path.join(configDir, "fab-shots"); // full uncropped frames (mineable)
   const tmpShot = path.join(os.tmpdir(), "sc-fab-shot.png");
   let busy = false;
+  let lastState = "";
+  // Steady states (off/idle/watching) only report on change; discrete events always fire.
+  const emitState = (state) => { if (state !== lastState) { lastState = state; onStatus?.({ state }); } };
+  const emitEvent = (s) => { lastState = s.state; onStatus?.(s); };
   let lastMission = "";       // last mission title sent (throttle screen-read posts)
   let pendingItem = null;     // item seen last tick, awaiting a settle poll before capture
   const uploaded = new Set(); // items pushed to the site this session
@@ -159,12 +165,18 @@ function startFabCapture({ port, configDir }) {
 
   async function tick() {
     const cfg = readConfig(configDir);
-    if (busy || cfg.fabCapture !== true) return;
+    // Two independent opt-ins share one screen-read: image capture and pinned-mission OCR.
+    // Either one arms the loop; each read is then gated by its own flag below.
+    const fab = cfg.fabCapture === true;
+    const miss = cfg.missionOcr === true;
+    if (!fab && !miss) { emitState("off"); return; }
+    if (busy) return;
     const proc = await foregroundProcess();
-    if (!/^StarCitizen$/i.test(proc)) return; // only ever look at SC
+    if (!/^StarCitizen$/i.test(proc)) { emitState("idle"); return; } // only ever look at SC
+    emitState("watching");
     busy = true;
     try {
-      const have = await ensureRemoteHave();
+      const have = fab ? await ensureRemoteHave() : null; // dedup set only needed for capture
       const shot = await captureScreen();
       if (!shot) return;
       fs.writeFileSync(tmpShot, shot.toPNG());
@@ -175,6 +187,7 @@ function startFabCapture({ port, configDir }) {
       });
       const read = await resp.json();
       if (read.kind === "fabricator" && read.item) {
+        if (!fab) { pendingItem = null; return; } // image capture disabled — ignore kiosk frames
         const item = read.item;
         // Dedup: already uploaded this session, or the site already has it.
         if (uploaded.has(item) || have.has(item)) { pendingItem = null; return; }
@@ -183,6 +196,7 @@ function startFabCapture({ port, configDir }) {
         // a poll later (this shot) before capturing, giving the render time to finish.
         if (pendingItem !== item) {
           pendingItem = item;
+          emitEvent({ state: "settling", name: read.name });
           console.log(`[fab-capture] ${read.name}: waiting for render to settle`);
           return;
         }
@@ -200,15 +214,18 @@ function startFabCapture({ port, configDir }) {
         // fabrication time + recipe we may mine later. One per item.
         fs.mkdirSync(shotsDir, { recursive: true });
         fs.writeFileSync(path.join(shotsDir, `${item}.jpg`), shot.toJPEG(85));
+        let uploadedOk = false;
         if (cfg.syncToken) {
-          const ok = await upload(item, jpeg, cfg.syncToken);
-          console.log(`[fab-capture] ${ok ? "uploaded" : "saved (upload failed)"} ${read.name} (${item})`);
+          uploadedOk = await upload(item, jpeg, cfg.syncToken);
+          console.log(`[fab-capture] ${uploadedOk ? "uploaded" : "saved (upload failed)"} ${read.name} (${item})`);
         } else {
           console.log(`[fab-capture] saved ${read.name} (${item}) — no sync token, not uploaded`);
         }
-      } else if (read.kind === "mission" && read.titleRaw && read.titleRaw !== lastMission) {
+        emitEvent({ state: "captured", name: read.name, uploaded: uploadedOk });
+      } else if (read.kind === "mission" && miss && read.titleRaw && read.titleRaw !== lastMission) {
         // Tell the tracker which mission is pinned in-game (ground truth the log lacks).
         lastMission = read.titleRaw;
+        emitEvent({ state: "mission", title: read.titleRaw });
         try {
           await fetch(`http://localhost:${port}/api/missions/screen`, {
             method: "POST",

@@ -68,6 +68,10 @@ interface Config {
   /** Opt-in: capture item renders from the in-game Fabrication Kiosk and contribute
    *  them to subliminal.gg's blueprint catalog. Read by electron/capture.cjs each poll. */
   fabCapture: boolean;
+  /** Opt-in: OCR the in-game screen to read which mission you have PINNED (ground truth the
+   *  game.log can't give — it sees every accepted mission equally). Independent of fabCapture;
+   *  either one arms the capture loop. Read by electron/capture.cjs each poll. */
+  missionOcr: boolean;
   /** GPU hardware acceleration for the Electron overlay. OFF by default — it composites
    *  a transparent window over a Vulkan game and crashes AMD drivers; software rendering
    *  is safe. Read by electron/main.cjs at startup (needs an app restart to change). */
@@ -95,6 +99,16 @@ interface Config {
   /** App version whose "what's new" card the user has dismissed. The card shows once per
    *  new version (when this !== the running version) and this is set on dismiss. */
   seenChangelog: string;
+  /** Reveal the loadout-overlay settings (Erkul URLs + ship auto-switch) in config.html.
+   *  Off by default — those are Sub's erkul stream-overlay feature, meaningless to normal
+   *  blueprint-tracker users. Unlocked by a hidden gesture (click the Settings title 5×). */
+  showLoadout: boolean;
+  /** Overlay HUD declutter toggles (set from the overlay's settings cog). Hide the
+   *  footer base/mine odds button, the "Verify from logs" button, and the fabricator
+   *  category filter bar respectively. Sent to the overlay via the mission view prefs. */
+  hideOdds: boolean;
+  hideVerify: boolean;
+  hideCatbar: boolean;
 }
 
 const DEFAULTS: Config = {
@@ -105,6 +119,7 @@ const DEFAULTS: Config = {
   syncToken: "",
   syncEnabled: false,
   fabCapture: false,
+  missionOcr: false,
   hwAccel: false,
   amdCompat: false,
   bindingPng: "",
@@ -113,6 +128,10 @@ const DEFAULTS: Config = {
   timeRelative: true,
   shareLogs: false,
   seenChangelog: "",
+  showLoadout: false,
+  hideOdds: true,
+  hideVerify: true,
+  hideCatbar: false,
 };
 
 function loadConfig(): Config {
@@ -263,7 +282,16 @@ const missionClients = new Set<ServerResponse>();
 // doesn't know about config). Sent on every mission broadcast so a config change (e.g.
 // the time-format toggle) reaches the overlay live via broadcastMissions().
 function missionsPayload(): string {
-  return JSON.stringify({ ...tracker.view(), prefs: { timeRelative: config.timeRelative } });
+  return JSON.stringify({
+    ...tracker.view(),
+    prefs: {
+      timeRelative: config.timeRelative,
+      hideOdds: config.hideOdds,
+      hideVerify: config.hideVerify,
+      hideCatbar: config.hideCatbar,
+      missionOcr: config.missionOcr,
+    },
+  });
 }
 function broadcastMissions(): void {
   const data = `data: ${missionsPayload()}\n\n`;
@@ -553,6 +581,7 @@ const server = createServer(async (req, res) => {
     if (body.clearToken === true) config.syncToken = "";
     if (typeof body.syncEnabled === "boolean") config.syncEnabled = body.syncEnabled;
     if (typeof body.fabCapture === "boolean") config.fabCapture = body.fabCapture;
+    if (typeof body.missionOcr === "boolean") config.missionOcr = body.missionOcr;
     // GPU accel is read by electron/main.cjs at startup; persist here, restart applies it.
     if (typeof body.hwAccel === "boolean") config.hwAccel = body.hwAccel;
     if (typeof body.amdCompat === "boolean") config.amdCompat = body.amdCompat;
@@ -561,7 +590,13 @@ const server = createServer(async (req, res) => {
     if (typeof body.overlayHotkey === "string" && body.overlayHotkey.trim()) config.overlayHotkey = body.overlayHotkey.trim();
     if (typeof body.timeRelative === "boolean") config.timeRelative = body.timeRelative;
     if (typeof body.shareLogs === "boolean") config.shareLogs = body.shareLogs;
+    if (typeof body.showLoadout === "boolean") config.showLoadout = body.showLoadout;
+    if (typeof body.hideOdds === "boolean") config.hideOdds = body.hideOdds;
+    if (typeof body.hideVerify === "boolean") config.hideVerify = body.hideVerify;
+    if (typeof body.hideCatbar === "boolean") config.hideCatbar = body.hideCatbar;
     await saveConfig();
+    // Push the new prefs to every open overlay (incl. OBS browser-source) live.
+    broadcastMissions();
     await reindex();
     startWatcher();
     // Re-arm sync with the new settings and reconcile the full collection.

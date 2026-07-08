@@ -546,7 +546,11 @@ if (!app.requestSingleInstanceLock()) {
     registerOverlayHotkey(overlayKey);
     registerBindingHotkey(bindKey);
     // Opt-in fabricator screen-capture loop (config.fabCapture). No-op until enabled.
-    startFabCapture({ port: PORT, configDir: path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker") });
+    startFabCapture({
+      port: PORT,
+      configDir: path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker"),
+      onStatus: (s) => { try { overlay?.webContents.send("overlay:ocr", s); } catch { /* window gone */ } },
+    });
   });
 
   // Native PNG picker for the config window (renderers can't open OS dialogs).
