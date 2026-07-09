@@ -28,8 +28,10 @@
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,178,49,.45); }
   ::-webkit-scrollbar-corner { background: transparent; }
   .wrap { max-width: 680px; margin: 0 auto; }
-  h1 { font-family: var(--font-head); font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
-  h1 small { display: block; font-family: var(--font-body); font-size: 12px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; margin-top: 6px; font-weight: 600; }
+  .apphead { display: flex; align-items: center; gap: 15px; cursor: default; user-select: none; }
+  .app-logo { width: 54px; height: 54px; border-radius: 12px; flex: none; }
+  h1 { font-family: var(--font-head); font-size: 34px; font-weight: 700; color: #fff; letter-spacing: -.015em; line-height: 1.05; }
+  .app-sub { font-family: var(--font-body); font-size: 12px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; margin-top: 5px; font-weight: 600; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: .75rem; padding: 20px; margin-top: 16px; }
   .label { font-family: var(--font-head); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
   input[type=text] { width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text); padding: 10px 12px; font-family: var(--font-body); font-size: 14px; border-radius: var(--radius-sm); transition: border-color .15s; }
@@ -61,12 +63,67 @@
   /* Loadout-overlay settings (erkul URLs + ship auto-switch) are hidden for normal users —
      they're Sub's stream-overlay feature. Revealed by the hidden unlock (title ×5). */
   body:not(.show-loadout) .loadout-only { display: none; }
-  h1 { cursor: default; user-select: none; }
+  /* Support links (Sub Club / Patreon / Twitch) */
+  .support-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .support { display: flex; align-items: center; gap: 11px; padding: 11px 13px;
+    background: var(--field); border: 1px solid var(--line); border-left-width: 3px;
+    border-radius: var(--radius-sm); text-decoration: none; transition: background .15s, border-color .15s; }
+  .support:hover { background: var(--card-high); text-decoration: none; }
+  .support .support-ico { flex: none; width: 22px; display: grid; place-items: center; font-size: 18px; }
+  .support .support-ico svg { display: block; }
+  .support .support-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .support .support-txt b { color: var(--text); font-size: 13px; font-weight: 700; }
+  .support .support-txt small { color: var(--muted); font-size: 11.5px; }
+  .support .support-arrow { flex: none; color: var(--outline); font-size: 14px; }
+  .support:hover .support-arrow { color: var(--amber); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 id="appTitle">SC Blueprint Tracker<small>Settings</small></h1>
+  <div class="apphead" id="appTitle">
+    <img src="/tray-icon.png" alt="" class="app-logo" />
+    <div>
+      <h1>SC Blueprint Tracker</h1>
+      <div class="app-sub">Settings</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">About</div>
+    <div class="hint" style="margin-top:0">
+      <strong>SC Blueprint Tracker</strong> is a desktop app that reads your Star Citizen game log to show
+      the blueprint reward pool for the mission you're tracking, checking off each blueprint as you collect
+      it. It runs as a lightweight in-game overlay — a transparent HUD that floats over the game and updates
+      live while you play. Point it at your <code>game.log</code> below to get started, and optionally connect
+      your <a href="https://subliminal.gg/blueprints" target="_blank">subliminal.gg</a> account to sync your
+      collection and browse everything you've unlocked on the web. It can also use screen reading (OCR) —
+      completely opt-in — to detect which mission you're tracking in-game.
+    </div>
+    <div class="hint" style="margin-top:16px; margin-bottom:8px">This tracker is free for everyone and supported by those who have the means. If it saves you time, helps your Star Citizen gameplay, here are the ways to back and keep development going:</div>
+    <div class="support-grid">
+      <a class="support" href="https://subliminal.gg/#subclub" target="_blank" rel="noopener" style="border-left-color:var(--amber)">
+        <span class="support-ico">👑</span>
+        <span class="support-txt"><b>Join SubClub</b><small>Membership perks and the most direct way to back the channel.</small></span>
+        <span class="support-arrow">↗</span>
+      </a>
+      <a class="support" href="https://www.twitch.tv/subs/subliminalstv" target="_blank" rel="noopener" style="border-left-color:#9146FF">
+        <span class="support-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="#9146FF" aria-hidden="true"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg></span>
+        <span class="support-txt"><b>Subscribe on Twitch</b><small>Subscribe or gift subs on the SubliminalsTV stream.</small></span>
+        <span class="support-arrow">↗</span>
+      </a>
+      <a class="support" href="https://www.patreon.com/c/SubliminalsTV" target="_blank" rel="noopener" style="border-left-color:#FF424D">
+        <span class="support-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="#FF424D" aria-hidden="true"><path d="M22.957 7.21c-.004-3.064-2.391-5.576-5.191-6.482-3.478-1.125-8.064-.962-11.384.604C2.357 3.231 1.093 7.391 1.046 11.54c-.039 3.411.302 12.396 5.369 12.46 3.765.047 4.326-4.804 6.068-7.141 1.24-1.662 2.836-2.132 4.801-2.618 3.376-.836 5.678-3.501 5.673-7.031Z"/></svg></span>
+        <span class="support-txt"><b>Become a Patron</b><small>Monthly support over on Patreon.</small></span>
+        <span class="support-arrow">↗</span>
+      </a>
+      <a class="support" href="https://subliminal.gg/projects" target="_blank" rel="noopener" style="border-left-color:#45D0E0">
+        <span class="support-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="#45D0E0" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span>
+        <span class="support-txt"><b>Check out other projects</b><small>More SubliminalsTV tools and Star Citizen apps.</small></span>
+        <span class="support-arrow">↗</span>
+      </a>
+    </div>
+    <div class="hint" style="text-align:center; margin-top:12px; opacity:0.75">Thank you — every bit helps. o7</div>
+  </div>
 
   <div class="card loadout-only">
     <div class="label">Erkul Loadout URLs</div>
@@ -96,11 +153,18 @@
     <input type="text" id="syncToken" placeholder="scbp_…  paste your token from subliminal.gg/blueprints" />
     <label class="opt"><input type="checkbox" id="syncEnabled" /> Sync my collection to my subliminal.gg account</label>
     <div class="hint" id="syncStatus"></div>
-    <div class="hint">Get a token at <a href="https://subliminal.gg/blueprints" target="_blank">subliminal.gg/blueprints</a> → “Connect the desktop tracker”. Received blueprints and the mission you're tracking sync to your account automatically — leave the field blank to keep the saved token.</div>
-    <label class="opt"><input type="checkbox" id="fabCapture" /> Help build the item image library</label>
-    <div class="hint">When you open a Fabrication Kiosk in-game, the app snaps the item's picture and contributes it to subliminal.gg's blueprint catalog — only ever while Star Citizen is focused, only items we don't have yet, nothing else on your screen. You're credited on the contributor leaderboard. Needs a sync token above.</div>
+    <div class="hint">Get your token at <a href="https://subliminal.gg/blueprints" target="_blank">subliminal.gg/blueprints</a> → “Connect the desktop tracker”. Your collection and tracked mission then sync automatically.</div>
     <label class="opt"><input type="checkbox" id="shareLogs" /> Share anonymized logs to improve the tracker</label>
     <div class="hint">When on, the app sends your Star Citizen <code>Game.log</code> to SubliminalsTV so we can find missions and blueprint drops the tracker gets wrong. Before it leaves your PC, your <strong>handle, account ID, IP address, and login session are stripped out, and chat is removed entirely</strong> — only mission and blueprint events remain. It's only ever used to improve the app. Needs a sync token above. <strong>Off by default.</strong></div>
+  </div>
+
+  <div class="card">
+    <div class="label">Screen Reading (OCR)</div>
+    <div class="hint" style="margin-top:0">Both use Windows' built-in text recognition and only ever run <strong>while Star Citizen is the focused window</strong>. Both are <strong>off by default</strong> — nothing on your screen is read unless you turn it on. (You can also flip these from the overlay's ⚙ menu.)</div>
+    <label class="opt"><input type="checkbox" id="missionOcr" /> Detect the mission I'm tracking in-game</label>
+    <div class="hint">Reads the tracked-mission panel so the overlay knows which mission you've actually selected — ground truth the game log can't give (it sees every accepted mission the same). No account needed.</div>
+    <label class="opt"><input type="checkbox" id="fabCapture" /> Help build the item image library</label>
+    <div class="hint">When you open a Fabrication Kiosk in-game, the app snaps the item's picture and contributes it to subliminal.gg's blueprint catalog — only items we don't have yet, nothing else on your screen. You're credited on the contributor leaderboard. Needs a sync token above.</div>
   </div>
 
   <div class="card">
@@ -132,17 +196,9 @@
     <div class="hint"><strong>Off by default.</strong> The overlay renders on the CPU, which avoids crashes some GPUs (especially AMD) hit when the overlay runs over the game. Turn this on only if you have GPU headroom and don't get crashes. <em>Changing this requires restarting the app.</em></div>
   </div>
 
-  <div class="card">
-    <div class="label">Recent Activity</div>
-    <label class="opt"><input type="checkbox" id="timeRelative" /> Show times as &ldquo;2h ago&rdquo; instead of the date &amp; clock</label>
-    <div class="hint">Controls the timestamps in the overlay's <strong>Recent Missions</strong> and <strong>Recent Blueprints</strong> lists (shown when no mission is tracked). On = relative (&ldquo;just now&rdquo;, &ldquo;3h ago&rdquo;, &ldquo;2d ago&rdquo;); off = the actual date and clock. <strong>Applies immediately, no restart.</strong></div>
-  </div>
-
   <div style="margin-top:20px; display:flex; align-items:center;">
     <button class="amber" onclick="save()">Save</button>
     <span class="saved" id="saved">Saved ✓</span>
-    <span style="flex:1"></span>
-    <a href="/" target="_blank">Open overlay ↗</a>
   </div>
 
   <div class="hint" style="margin-top:18px; opacity:0.7">
@@ -167,11 +223,13 @@
     document.body.classList.toggle("show-loadout", !!cfg.showLoadout);
     document.getElementById("syncEnabled").checked = !!cfg.syncEnabled;
     document.getElementById("fabCapture").checked = !!cfg.fabCapture;
+    document.getElementById("missionOcr").checked = !!cfg.missionOcr;
     document.getElementById("shareLogs").checked = !!cfg.shareLogs;
-    document.getElementById("timeRelative").checked = cfg.timeRelative !== false;
-    document.getElementById("syncStatus").textContent = cfg.hasSyncToken
-      ? "Token saved. Leave the field blank to keep it."
-      : "No token yet — paste one to connect.";
+    // Put the saved key (truncated) right in the field so it's obvious one is connected.
+    // Focusing clears it for a clean paste; the "…" guard in save() stops it being re-submitted.
+    const tokenEl = document.getElementById("syncToken");
+    tokenEl.value = cfg.hasSyncToken ? cfg.syncTokenPreview : "";
+    document.getElementById("syncStatus").textContent = cfg.hasSyncToken ? "" : "No token yet — paste one to connect.";
     renderList();
   }
 
@@ -224,11 +282,17 @@
       bindingHotkey: document.getElementById("bindingHotkey").value.trim() || "Alt+F3",
       syncEnabled: document.getElementById("syncEnabled").checked,
       fabCapture: document.getElementById("fabCapture").checked,
+      missionOcr: document.getElementById("missionOcr").checked,
       shareLogs: document.getElementById("shareLogs").checked,
-      timeRelative: document.getElementById("timeRelative").checked,
     };
     const token = document.getElementById("syncToken").value.trim();
-    if (token) body.syncToken = token; // only send when typed; blank keeps the saved one
+    // The field may still show the truncated preview (contains "…"); only submit a real pasted token.
+    // Pasting a token IS the intent to sync, so turn sync on with it (no silent-off footgun).
+    if (token && !token.includes("…")) {
+      body.syncToken = token;
+      body.syncEnabled = true;
+      document.getElementById("syncEnabled").checked = true;
+    }
     await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     document.getElementById("syncToken").value = "";
     const s = document.getElementById("saved"); s.classList.add("show"); setTimeout(() => s.classList.remove("show"), 1400);
@@ -380,6 +444,20 @@
   });
 
   document.getElementById("logPath").addEventListener("input", checkLogPath);
+  // The sync field shows the truncated saved key; clear it on focus so a new token pastes
+  // cleanly, and restore the preview on blur if nothing was typed.
+  const syncTokenEl = document.getElementById("syncToken");
+  syncTokenEl.addEventListener("focus", () => { if (syncTokenEl.value === cfg.syncTokenPreview) syncTokenEl.value = ""; });
+  syncTokenEl.addEventListener("blur", () => { if (!syncTokenEl.value.trim() && cfg.hasSyncToken) syncTokenEl.value = cfg.syncTokenPreview; });
+  // The OCR toggles also live in the overlay cog; when this window regains focus, re-read them
+  // so a change made over there shows here too (only these checkboxes, never text being edited).
+  window.addEventListener("focus", async () => {
+    try {
+      const c = await (await fetch("/api/config")).json();
+      document.getElementById("missionOcr").checked = !!c.missionOcr;
+      document.getElementById("fabCapture").checked = !!c.fabCapture;
+    } catch { /* ignore */ }
+  });
   loadCfg();
   initOverlayToggle();
 </script>

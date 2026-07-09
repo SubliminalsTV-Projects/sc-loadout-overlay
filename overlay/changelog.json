@@ -1,6 +1,12 @@
 {
   "0.1.22": [
-    "New: a settings ⚙ on the overlay itself — tuck away the odds toggle, the “Verify from logs” button, and the category filter bar for a cleaner look.",
+    "New: the overlay diamond glows purple when SubliminalsTV is live on Twitch — hover it and click to jump into the stream.",
+    "In the Fabricator, the diamond glows gold so you can tell the tracker sees the kiosk.",
+    "Both opt-in screen-reading features (pinned-mission scan + item-image capture) now appear in Settings and the overlay ⚙, and stay in sync.",
+    "Open the full Settings window straight from the overlay ⚙.",
+    "Pasting a sync token now turns syncing on automatically — no more forgetting the checkbox.",
+    "New: a settings ⚙ on the overlay — the odds view (base / your real odds) and “Verify from logs” now live in there, and you can hide the category filter bar, for a cleaner HUD.",
+    "Cleaner footer: your Collected count is now big and clear, with the tracker version and game build stacked neatly beside it.",
     "The overlay now shows what the item-image scanner is doing — a quick toast when it reads your pinned mission or captures a fabricator item, plus a live status in the ⚙ menu.",
     "New: toggle mission-name scanning on/off from the overlay ⚙ menu (reads the mission you have pinned in-game — off by default).",
     "Fixed: the pinned-mission reader now recognizes missions whose names are cut off on-screen or contain quotes (e.g. Terrorist Shigemori \"Jester\" Amsden…).",
