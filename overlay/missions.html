@@ -75,15 +75,12 @@
 
   /* Grab handle: a discoverable "move" affordance that fades in on hover (Electron
      only). Clicking it drops into move mode — the reliable, hover-suspended drag. */
-  #grip { display: none; position: absolute; top: 9px; right: 44px; z-index: 20;
-    align-items: center; gap: 5px; padding: 3px 8px; border-radius: 3px;
-    -webkit-app-region: no-drag; cursor: grab; user-select: none;
-    border: 1px solid var(--border); background: rgba(8, 17, 26, 0.72); color: var(--cyan);
-    font-family: var(--sans); font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-    text-transform: uppercase; opacity: 0; transition: opacity 0.15s ease; }
-  #grip .dots { font-size: 12px; line-height: 1; letter-spacing: -1px; }
-  #panel.electron #grip { display: flex; }
-  #panel.electron:hover #grip { opacity: 0.85; }
+  #grip { display: none; position: absolute; top: 8px; right: 44px; z-index: 20;
+    width: 25px; height: 25px; place-items: center; -webkit-app-region: no-drag;
+    cursor: grab; user-select: none; border: 1px solid var(--border); border-radius: 4px;
+    background: rgba(8, 17, 26, 0.72); color: var(--cyan); opacity: 0; transition: opacity 0.15s ease; }
+  #grip svg { width: 14px; height: 14px; display: block; }
+  #panel.electron #grip { display: grid; opacity: 0.85; }
   #grip:hover { opacity: 1 !important; background: rgba(69, 208, 224, 0.2); }
   #panel.moving #grip { display: none; }
 
@@ -92,8 +89,8 @@
   #cog { position: absolute; top: 8px; right: 11px; z-index: 22; -webkit-app-region: no-drag;
     width: 25px; height: 25px; display: grid; place-items: center; cursor: pointer;
     border: 1px solid var(--border); border-radius: 4px; background: rgba(8, 17, 26, 0.72);
-    color: var(--cyan); font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s ease; }
-  #panel:hover #cog, #cog.open { opacity: 0.9; }
+    color: var(--cyan); font-size: 14px; line-height: 1; opacity: 0.85; transition: opacity 0.15s ease; }
+  #cog.open { opacity: 1; }
   #cog:hover { opacity: 1; background: rgba(69, 208, 224, 0.2); }
   #panel.moving #cog { display: none; }
   #cogMenu { display: none; position: absolute; top: 37px; right: 11px; z-index: 31; width: 232px;
@@ -113,9 +110,15 @@
   #cogMenu .cog-ocr.on .ocr-dot { background: var(--cyan-bright); box-shadow: 0 0 6px var(--cyan); }
 
   /* Cog declutter toggles: hide footer odds/verify buttons + the category filter bar. */
-  #panel.hide-odds #oddsToggle { display: none; }
-  #panel.hide-verify #verify { display: none; }
   #panel.hide-catbar .catbar { display: none; }
+  /* Cog action button (Verify) + inline status line. */
+  #cogMenu .cog-btn { display: block; width: calc(100% - 24px); margin: 5px 12px 2px; padding: 7px 10px;
+    text-align: center; font-family: var(--sans); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
+    cursor: pointer; color: var(--cyan-text); background: rgba(69, 208, 224, 0.1);
+    border: 1px solid var(--border); border-radius: 4px; }
+  #cogMenu .cog-btn:hover { background: rgba(69, 208, 224, 0.2); border-color: var(--cyan); }
+  #cogMenu .cog-btn:disabled { opacity: 0.6; cursor: default; }
+  #cogMenu .cog-status { padding: 1px 12px 3px; font-size: 10px; color: var(--cyan-dim); min-height: 12px; }
 
   /* Transient OCR activity toast (item captured / mission read). Never blocks clicks. */
   #ocrToast { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%) translateY(6px);
@@ -137,12 +140,25 @@
     background: repeating-linear-gradient(90deg, rgba(92, 198, 224, 0.32) 0 3px, transparent 3px 8px); opacity: 0.7; }
   #missionPick, .progress { -webkit-app-region: no-drag; }
 
-  .eyebrow { display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 600;
+  .eyebrow { position: relative; display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 600;
     letter-spacing: 0.22em; text-transform: uppercase; color: var(--cyan); }
   /* diamond glyph */
-  .dot { width: 7px; height: 7px; background: var(--cyan-bright); transform: rotate(45deg);
-    box-shadow: 0 0 8px var(--cyan); animation: pulse 1.9s ease-in-out infinite; }
+  .dot { position: relative; width: 7px; height: 7px; background: var(--cyan-bright); transform: rotate(45deg);
+    box-shadow: 0 0 8px var(--cyan); animation: pulse 1.9s ease-in-out infinite;
+    transition: background 0.2s ease, box-shadow 0.2s ease; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  /* In the fabricator: diamond glows gold (matches the collected count). SubliminalsTV live: purple. */
+  .dot.fab { background: var(--gold); box-shadow: 0 0 11px var(--gold), 0 0 4px var(--gold); }
+  .dot.live { background: #9146FF; box-shadow: 0 0 11px #9146FF, 0 0 4px #9146FF; }
+  .dot.clickable { cursor: pointer; -webkit-app-region: no-drag; }
+  .dot.clickable::after { content: ""; position: absolute; inset: -8px; } /* bigger click target */
+  /* Live-on-Twitch hover invite */
+  #liveTip { display: none; position: absolute; top: calc(100% + 8px); left: -2px; z-index: 45;
+    white-space: nowrap; background: rgba(10, 24, 34, 0.97); border: 1px solid #9146FF; border-radius: 8px;
+    padding: 7px 12px; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    text-transform: none; color: var(--cyan-text); box-shadow: 0 6px 20px rgba(0,0,0,0.5); pointer-events: none; }
+  #liveTip b { color: #b98bff; }
+  #liveTip.show { display: block; }
 
   .title { font-size: 19px; font-weight: 600; line-height: 1.12; letter-spacing: 0.02em;
     text-transform: uppercase; margin-top: 9px; color: #eaf6fb; text-shadow: 0 0 14px rgba(69, 208, 224, 0.35); }
@@ -268,17 +284,19 @@
   .msg b { color: var(--cyan); display: block; font-weight: 600; font-size: 13px; text-transform: uppercase;
     letter-spacing: 0.1em; margin-bottom: 5px; }
 
-  .foot { padding: 9px 16px 11px; font-size: 10px; color: var(--faint); position: relative; z-index: 2;
-    display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--divider); }
-  .footrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
-  .foot .patch { color: var(--faint); font-family: var(--mono); font-size: 9.5px; }
-  #verify, #oddsToggle { font-family: var(--sans); font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em;
-    text-transform: uppercase; cursor: pointer; padding: 4px 11px; border-radius: 3px;
-    border: 1px solid var(--border); color: var(--cyan); background: rgba(69, 208, 224, 0.08); }
-  #verify:hover, #oddsToggle:hover { background: rgba(69, 208, 224, 0.18); border-color: var(--cyan); }
-  #verify:disabled { opacity: .6; cursor: default; }
-  #oddsToggle { letter-spacing: 0.04em; }
-  #vstatus { color: var(--cyan); font-size: 10px; }
+  /* Footer: big two-line Collected on the left; app + game version stacked small on the right. */
+  .foot-col-collected { display: flex; flex-direction: column; line-height: 1; }
+  .fc-label { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--cyan-dim); }
+  .fc-num { font-family: var(--mono); font-size: 23px; font-weight: 700; color: var(--gold);
+    margin-top: 4px; text-shadow: 0 0 12px rgba(255, 210, 122, 0.3); }
+  .foot-col-ver { display: flex; flex-direction: column; align-items: flex-end; text-align: right;
+    line-height: 1.4; }
+  .fv-app { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--cyan-dim); }
+  .fv-game { font-family: var(--mono); font-size: 9.5px; color: var(--faint); }
+  .foot { padding: 10px 16px 11px; position: relative; z-index: 2; border-top: 1px solid var(--divider);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 
   /* Mission rewards readout (schema/2): static aUEC payout + ITEM rewards (actual
      items — Wikelo ships, armor, scrip — not blueprints; display-only, no toggle). */
@@ -394,18 +412,23 @@
       </div>
     </div>
     <div class="head">
-      <div id="grip" title="Move overlay"><span class="dots">⠿</span>Move</div>
+      <div id="grip" title="Move overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
       <div id="cog" title="Overlay settings">⚙</div>
       <div id="cogMenu">
-        <div class="cog-sec">Overlay</div>
-        <label class="cog-opt"><input type="checkbox" id="tgOdds" /> Show odds toggle</label>
-        <label class="cog-opt"><input type="checkbox" id="tgVerify" /> Show “Verify from logs”</label>
+        <div class="cog-sec">Display</div>
         <label class="cog-opt"><input type="checkbox" id="tgCatbar" /> Show category filter bar</label>
-        <div class="cog-sec">OCR</div>
-        <label class="cog-opt"><input type="checkbox" id="tgMissionOcr" /> Scan for pinned mission</label>
+        <label class="cog-opt"><input type="checkbox" id="tgOddsAdj" /> Show my real odds (only what I still need)</label>
+        <label class="cog-opt"><input type="checkbox" id="tgTimeRel" /> Recent times as “2h ago”</label>
+        <div class="cog-sec">OCR (opt-in)</div>
+        <label class="cog-opt"><input type="checkbox" id="tgMissionOcr" /> Scan for tracked mission</label>
+        <label class="cog-opt"><input type="checkbox" id="tgFabCapture" /> Contribute item images</label>
         <div class="cog-ocr" id="ocrStat"><span class="ocr-dot"></span><b>OCR idle</b></div>
+        <div class="cog-sec">Tools</div>
+        <button type="button" id="verify" class="cog-btn" title="Re-scan your game logs (including backups) for received blueprints">⟳ Verify from logs</button>
+        <div class="cog-status" id="vstatus"></div>
+        <button type="button" id="openSettings" class="cog-btn" title="Open the full settings window">⚙ Open full settings…</button>
       </div>
-      <div class="eyebrow"><span class="dot"></span> Blueprint Pool</div>
+      <div class="eyebrow"><span class="dot" id="liveDot"></span> Blueprint Pool<span id="liveTip">SubliminalsTV is <b>live</b>. Click if you want to hang out ↗</span></div>
       <div class="title" id="title">No mission tracked</div>
       <div class="sub" id="sub"></div>
       <div id="missionPick">
@@ -419,14 +442,13 @@
     <div class="pool" id="pool"></div>
     <div id="msg"></div>
     <div class="foot">
-      <div class="footrow">
-        <span id="collected">collected: 0</span>
-        <button id="oddsToggle" title="Base odds (out of the full pool) vs your real odds counting only what you still need">odds: base</button>
-        <button id="verify" title="Re-scan your game logs (including backups) for received blueprints">⟳ Verify from logs</button>
+      <div class="foot-col-collected">
+        <span class="fc-label">Collected</span>
+        <span class="fc-num" id="collected">0</span>
       </div>
-      <div class="footrow">
-        <span id="vstatus"></span>
-        <span class="patch" id="patch"></span>
+      <div class="foot-col-ver">
+        <span class="fv-app" id="appVer">Blueprint Tracker</span>
+        <span class="fv-game" id="patch"></span>
       </div>
     </div>
     <div id="ocrToast"></div>
@@ -470,14 +492,10 @@
 
   // User prefs sent with the mission view (config-driven). Updated in render().
   // Defaults mirror the server so odds/verify start hidden (cleaner) with no first-paint flash.
-  let PREFS = { timeRelative: true, hideOdds: true, hideVerify: true, hideCatbar: false, missionOcr: false };
-  // Apply the declutter prefs (hide footer odds/verify + category bar) via panel classes,
-  // so they compose with the empty-state rules instead of fighting inline styles.
+  let PREFS = { timeRelative: true, hideCatbar: false, missionOcr: false };
+  // Apply the category-bar visibility pref via a panel class (composes with the empty-state rule).
   function applyPrefs() {
-    const p = $("panel");
-    p.classList.toggle("hide-odds", !!PREFS.hideOdds);
-    p.classList.toggle("hide-verify", !!PREFS.hideVerify);
-    p.classList.toggle("hide-catbar", !!PREFS.hideCatbar);
+    $("panel").classList.toggle("hide-catbar", !!PREFS.hideCatbar);
   }
 
   // Time label parts from an ISO stamp: absolute date+clock (the "date and timestamp")
@@ -531,13 +549,15 @@
   function render(v) {
     current = v;
     if (v.prefs) { PREFS = v.prefs; applyPrefs(); }
+    isLive = !!v.live; updateDiamond();
     const panel = $("panel");
     // Show the dataset version, and flag when the player's actual build isn't the one
     // we have data for (pools are an approximation from the same family).
     let patchTxt = v.patch || "";
     if (v.build && v.patch && !v.patch.includes(v.build)) patchTxt += " · build " + v.build + " (approx)";
     $("patch").textContent = patchTxt;
-    $("collected").textContent = "collected: " + (v.collectedTotal ?? 0);
+    $("appVer").textContent = "Blueprint Tracker" + (v.appVersion ? " v" + v.appVersion : "");
+    $("collected").textContent = v.collectedTotal ?? 0;
     $("completed").innerHTML = v.completion ? completionCard(v.completion)
       : v.completed ? '<span class="completed">Mission complete</span>' : "";
     renderPicker(v);
@@ -962,22 +982,16 @@
     if (current) render(current);
   });
 
-  // Toggle base vs adjusted (for-what-you-have) drop odds.
-  $("oddsToggle").addEventListener("click", () => {
-    oddsMode = oddsMode === "base" ? "adjusted" : "base";
-    $("oddsToggle").textContent = "odds: " + (oddsMode === "base" ? "base" : "mine");
-    if (current) render(current);
-  });
-
-  // ── Settings cog: declutter toggles + OCR status ──────────────────────────
+  // ── Settings cog: pool display, Verify, OCR ───────────────────────────────
   function setCog(open) {
     $("cogMenu").classList.toggle("open", open);
     $("cog").classList.toggle("open", open);
     if (open) {
-      $("tgOdds").checked = !PREFS.hideOdds;
-      $("tgVerify").checked = !PREFS.hideVerify;
       $("tgCatbar").checked = !PREFS.hideCatbar;
+      $("tgOddsAdj").checked = oddsMode === "adjusted";
+      $("tgTimeRel").checked = PREFS.timeRelative !== false;
       $("tgMissionOcr").checked = !!PREFS.missionOcr;
+      $("tgFabCapture").checked = !!PREFS.fabCapture;
       updateOcr();
       window.overlayApi?.setModal?.(true);
       window.overlayApi?.hover?.(true);
@@ -988,22 +1002,31 @@
   $("cog").addEventListener("click", (e) => { e.stopPropagation(); setCog(!$("cogMenu").classList.contains("open")); });
   $("cogMenu").addEventListener("click", (e) => e.stopPropagation());
   document.addEventListener("click", () => { if ($("cogMenu").classList.contains("open")) setCog(false); });
-  // A toggle: flip the pref, apply it locally now, and persist it (broadcasts to OBS too).
+  // A persisted display pref: apply locally now, save it (broadcasts to OBS too).
   function setPref(patch) {
     Object.assign(PREFS, patch);
     applyPrefs();
     fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) })
       .catch(() => { /* best-effort; the local apply already took effect */ });
   }
-  $("tgOdds").addEventListener("change", () => setPref({ hideOdds: !$("tgOdds").checked }));
-  $("tgVerify").addEventListener("change", () => setPref({ hideVerify: !$("tgVerify").checked }));
   $("tgCatbar").addEventListener("change", () => setPref({ hideCatbar: !$("tgCatbar").checked }));
+  // Odds mode: base (out of the full pool) vs adjusted (only what you still need). Session-local.
+  $("tgOddsAdj").addEventListener("change", () => {
+    oddsMode = $("tgOddsAdj").checked ? "adjusted" : "base";
+    if (current) render(current);
+  });
+  // Recent-activity time format (moved here from the settings window). Persisted + re-rendered.
+  $("tgTimeRel").addEventListener("change", () => { setPref({ timeRelative: $("tgTimeRel").checked }); if (current) render(current); });
   // Mission-name OCR on/off — read by the capture loop each poll (not a display pref).
   $("tgMissionOcr").addEventListener("change", () => { setPref({ missionOcr: $("tgMissionOcr").checked }); updateOcr(); });
+  $("tgFabCapture").addEventListener("change", () => { setPref({ fabCapture: $("tgFabCapture").checked }); updateOcr(); });
+  $("openSettings").addEventListener("click", (e) => { e.stopPropagation(); window.overlayApi?.openSettings?.(); setCog(false); });
 
-  // OCR activity (fabricator image capture + pinned-mission read). Fed by the Electron
+  // OCR activity (fabricator image capture + tracked-mission read). Fed by the Electron
   // shell over IPC; a no-op in OBS browser-source mode (no overlayApi).
   let OCR = { state: "", lastMission: "", lastCapture: "" };
+  let inFab = false;   // a fabricator kiosk is on screen (OCR context) -> gold diamond
+  let isLive = false;  // SubliminalsTV is live on Twitch (from the view) -> purple diamond
   let ocrToastT;
   function showOcrToast(text) {
     const el = $("ocrToast");
@@ -1012,11 +1035,11 @@
   }
   function updateOcr() {
     const el = $("ocrStat");
-    const active = OCR.state === "watching" || OCR.state === "settling";
+    const active = OCR.state === "watching" || OCR.state === "fabricator";
     el.classList.toggle("on", active);
     let head;
-    if (OCR.state === "idle") head = "Waiting for Star Citizen…";
-    else if (OCR.state === "settling") head = "Reading item…";
+    if (OCR.state === "fabricator") head = "Reading the fabricator…";
+    else if (OCR.state === "idle") head = "Waiting for Star Citizen…";
     else if (active) head = "Watching Star Citizen…";
     else head = "OCR off — turn on scanning above";
     let html = '<span class="ocr-dot"></span><b>' + head + "</b>";
@@ -1024,20 +1047,41 @@
     if (OCR.lastCapture) html += "<br>Last image: " + escapeHtml(OCR.lastCapture);
     el.innerHTML = html;
   }
+  // Diamond glyph colour: gold in the fabricator, purple when SubliminalsTV is live, else cyan.
+  // Fabricator wins (it's a momentary crafting cue); the live click/tooltip stay active whenever live.
+  function updateDiamond() {
+    const d = $("liveDot");
+    d.classList.toggle("fab", inFab);
+    d.classList.toggle("live", isLive && !inFab);
+    d.classList.toggle("clickable", isLive);
+    if (!isLive) $("liveTip").classList.remove("show");
+  }
   function onOcrEvent(s) {
     if (!s || !s.state) return;
     if (s.state === "mission") {
-      OCR.state = "watching";
       if (s.title) { OCR.lastMission = s.title; showOcrToast("🎯 " + s.title); }
     } else if (s.state === "captured") {
-      OCR.state = "watching";
       if (s.name) { OCR.lastCapture = s.name; showOcrToast("📸 " + s.name + (s.uploaded ? " · shared" : " · saved")); }
+    } else if (s.state === "settling") {
+      /* discrete event; leaves the on-screen context as-is */
     } else {
-      OCR.state = s.state; // off / idle / watching / settling
+      OCR.state = s.state;                 // context: off / idle / watching / fabricator
+      inFab = s.state === "fabricator";
+      updateDiamond();
     }
     updateOcr();
   }
   window.overlayApi?.onOcr?.(onOcrEvent);
+  // Live-on-Twitch diamond: hover invite + click through to the stream.
+  $("liveDot").addEventListener("mouseenter", () => { if (isLive) $("liveTip").classList.add("show"); });
+  $("liveDot").addEventListener("mouseleave", () => $("liveTip").classList.remove("show"));
+  $("liveDot").addEventListener("click", (e) => {
+    if (!isLive) return;
+    e.stopPropagation();
+    const url = "https://twitch.tv/subliminalstv";
+    if (window.overlayApi?.openUrl) window.overlayApi.openUrl(url);
+    else window.open(url, "_blank");
+  });
 
   applyPrefs();
 
