@@ -1,4 +1,10 @@
 {
+  "0.1.24": [
+    "New: a reputation bar in Mission Info shows your current standing with each mission giver (e.g. Sr. Contractor) and how close you are to the next rank — worked out from the missions you've completed since the last wipe. Hit “Verify from logs” in the ⚙ to fill it in from your play history.",
+    "Fixed: your tracked missions no longer disappear when you relaunch or Alt-F4 back into the game — they were getting wiped on every login.",
+    "Fixed: blueprint pools no longer show duplicate entries. On newer game builds the tracker could fall back to an older, stale copy of the mission data.",
+    "The opt-in mission-name scanner now reads mining, scanning and most other mission types, not only “Go to” missions."
+  ],
   "0.1.23": [
     "Fixed: missions that don't place a map marker — mining, ore scanning and friends — used to show nothing at all. They now resolve their blueprint pool and appear in the mission picker like everything else.",
     "New: your rank with each mission giver, worked out from the highest-rank mission you've been offered. Hit “Verify from logs” in the ⚙ to backfill it from your play history.",
