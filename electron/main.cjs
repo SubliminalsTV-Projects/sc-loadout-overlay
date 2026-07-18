@@ -487,6 +487,11 @@ function refreshMissions() {
 function setupUpdater() {
   if (!app.isPackaged) return;
   autoUpdater.autoDownload = true;
+  // Force a full streamed download instead of a block-differential one. The differential path
+  // emits NO download-progress events (so the tray sits at 0% the whole time), and because our
+  // installer isn't block-aligned across builds it re-downloads nearly the full file anyway via
+  // hundreds of slow ranged requests. A single full download is faster here and drives the tray %.
+  autoUpdater.disableDifferentialDownload = true;
   autoUpdater.on("update-downloaded", (info) => {
     updateDownload = null;
     refreshTray();
