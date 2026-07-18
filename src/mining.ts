@@ -107,6 +107,10 @@ export class MiningTracker extends EventEmitter {
       const key = `${read.station ?? ""}#${j.order}`; // stable per work-order slot
       const ex = [...this.jobs.values()].find((e) => e.key === key);
       if (ex) {
+        // Guard against an occasional dropped-hours misread (e.g. "9h 20m" read as "20m")
+        // yanking a good long timer down to minutes: ignore a read that suddenly SHORTENS
+        // the job by >40min, unless it already finished (a new job may have taken the slot).
+        if ((ex.endAt - now) / 1000 - j.remainingSec > 2400 && ex.endAt > now) continue;
         ex.endAt = endAt;
         ex.readAt = now;
         ex.doneNotified = false;
