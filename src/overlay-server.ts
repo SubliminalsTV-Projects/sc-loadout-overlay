@@ -80,6 +80,10 @@ interface Config {
   /** Mining Assistant: arms the capture loop to read the Refinement Center (job timers)
    *  and the mining scanner signature. Opt-in; read by electron/capture.cjs each poll. */
   miningAssistant: boolean;
+  /** Auto-show the Mining Assistant window when the scanner/refinery screen is detected. */
+  miningAutoShow: boolean;
+  /** Path to a user-chosen WAV to use as the alert tone (empty = built-in synth tone). */
+  miningTone: string;
   /** GPU hardware acceleration for the Electron overlay. OFF by default — it composites
    *  a transparent window over a Vulkan game and crashes AMD drivers; software rendering
    *  is safe. Read by electron/main.cjs at startup (needs an app restart to change). */
@@ -127,6 +131,8 @@ const DEFAULTS: Config = {
   fabCapture: false,
   missionOcr: false,
   miningAssistant: false,
+  miningAutoShow: false,
+  miningTone: "",
   hwAccel: false,
   amdCompat: false,
   bindingPng: "",
@@ -579,6 +585,19 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ ok: true }));
     return;
   }
+  // The user's chosen alert-tone WAV (config.miningTone). HEAD is used by the window to
+  // know whether a custom tone is set; GET streams it. 404 when unset/missing.
+  if (url === "/api/mining/tone") {
+    if (config.miningTone && existsSync(config.miningTone)) {
+      const buf = readFileSync(config.miningTone);
+      res.writeHead(200, { "Content-Type": "audio/wav", "Content-Length": buf.length });
+      res.end(req.method === "HEAD" ? undefined : buf);
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+    return;
+  }
   if (url === "/api/mining/remove-job" && req.method === "POST") {
     const body = await readBody(req);
     if (typeof body.id === "string") mining.removeJob(body.id);
@@ -679,6 +698,8 @@ const server = createServer(async (req, res) => {
     if (typeof body.fabCapture === "boolean") config.fabCapture = body.fabCapture;
     if (typeof body.missionOcr === "boolean") config.missionOcr = body.missionOcr;
     if (typeof body.miningAssistant === "boolean") config.miningAssistant = body.miningAssistant;
+    if (typeof body.miningAutoShow === "boolean") config.miningAutoShow = body.miningAutoShow;
+    if (typeof body.miningTone === "string") config.miningTone = body.miningTone;
     // GPU accel is read by electron/main.cjs at startup; persist here, restart applies it.
     if (typeof body.hwAccel === "boolean") config.hwAccel = body.hwAccel;
     if (typeof body.amdCompat === "boolean") config.amdCompat = body.amdCompat;

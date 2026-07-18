@@ -168,6 +168,13 @@
   </div>
 
   <div class="card">
+    <div class="label">Mining Assistant</div>
+    <div class="hint" style="margin-top:0">A separate overlay window (tray → Mining Assistant) that reads the mining scanner's signature to name rocks, and the Refinement Center to alarm when a refine finishes. Voice, volume and alert-tone controls live in that window's ⚙.</div>
+    <label class="opt"><input type="checkbox" id="miningAutoShow" /> Pop it open automatically when I'm scanning or refining</label>
+    <div class="hint">Shows the window on its own when the scanner or Refinement Center screen is detected. If you close it, it stays out of the way for a bit before it can pop again.</div>
+  </div>
+
+  <div class="card">
     <div class="label">Binding Chart Overlay</div>
     <div class="add">
       <input type="text" id="bindingPng" placeholder="no PNG chosen — pick one to enable" readonly />
@@ -224,6 +231,7 @@
     document.getElementById("syncEnabled").checked = !!cfg.syncEnabled;
     document.getElementById("fabCapture").checked = !!cfg.fabCapture;
     document.getElementById("missionOcr").checked = !!cfg.missionOcr;
+    document.getElementById("miningAutoShow").checked = !!cfg.miningAutoShow;
     document.getElementById("shareLogs").checked = !!cfg.shareLogs;
     // Put the saved key (truncated) right in the field so it's obvious one is connected.
     // Focusing clears it for a clean paste; the "…" guard in save() stops it being re-submitted.
@@ -283,6 +291,7 @@
       syncEnabled: document.getElementById("syncEnabled").checked,
       fabCapture: document.getElementById("fabCapture").checked,
       missionOcr: document.getElementById("missionOcr").checked,
+      miningAutoShow: document.getElementById("miningAutoShow").checked,
       shareLogs: document.getElementById("shareLogs").checked,
     };
     const token = document.getElementById("syncToken").value.trim();

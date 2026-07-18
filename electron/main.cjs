@@ -245,6 +245,15 @@ function toggleBinding() {
   bindingWin.showInactive();
 }
 
+// Patch the sidecar config over HTTP (the config lives in the sidecar process).
+async function postConfig(patch) {
+  try {
+    await fetch(`http://localhost:${PORT}/api/config`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+    });
+  } catch { /* sidecar not up yet — non-fatal */ }
+}
+
 // ── Mining Assistant window ───────────────────────────────────────────────────
 // A separate, INTERACTIVE always-on-top tool window (signature scanner + refinery
 // timers). Unlike the HUD it takes focus and clicks (target picker, remove buttons),
@@ -580,6 +589,12 @@ if (!app.requestSingleInstanceLock()) {
     } catch { /* defaults */ }
     registerOverlayHotkey(overlayKey);
     registerBindingHotkey(bindKey);
+    // Auto-show: pre-create the (hidden) Mining Assistant window so it's listening on the
+    // event stream and can pop itself when the scanner/refinery screen is detected.
+    try {
+      const p = path.join(process.env.APPDATA || process.env.HOME || ".", "sc-blueprint-tracker", "config.json");
+      if (JSON.parse(fs.readFileSync(p, "utf8")).miningAutoShow === true) createMining();
+    } catch { /* default off */ }
     // Opt-in fabricator screen-capture loop (config.fabCapture). No-op until enabled.
     startFabCapture({
       port: PORT,
@@ -597,6 +612,21 @@ if (!app.requestSingleInstanceLock()) {
     });
     return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
   });
+
+  // Mining Assistant: custom alert-tone WAV picker + show (for auto-pop-up). The chosen
+  // path is persisted server-side (config.miningTone) so the sidecar can serve it.
+  ipcMain.handle("mining:pick-tone", async () => {
+    const r = await dialog.showOpenDialog(miningWin ?? undefined, {
+      title: "Choose an alert-tone WAV",
+      filters: [{ name: "WAV audio", extensions: ["wav"] }],
+      properties: ["openFile"],
+    });
+    if (r.canceled || !r.filePaths.length) return false;
+    await postConfig({ miningTone: r.filePaths[0] });
+    return true;
+  });
+  ipcMain.handle("mining:clear-tone", async () => { await postConfig({ miningTone: "" }); return true; });
+  ipcMain.on("mining:show", () => { if (!miningWin) createMining(); miningWin.showInactive(); });
 
   // Config window's "Show in-game overlay" toggle (crash workaround). Owned here, not by
   // the sidecar config, so destroy/create is immediate.

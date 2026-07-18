@@ -27,6 +27,16 @@
   .head h1 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--cyan-text); flex: 1; }
   .head .x { -webkit-app-region: no-drag; cursor: pointer; color: var(--cyan-dim); font-size: 14px; padding: 2px 5px; border-radius: 3px; }
   .head .x:hover { color: var(--red); background: rgba(255,132,120,.1); }
+  .setpanel { padding: 8px 12px; border-bottom: 1px solid var(--divider); background: rgba(69,208,224,.04); }
+  .setrow { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 11.5px; color: var(--cyan-dim); }
+  .setrow .k { min-width: 74px; }
+  .setrow input[type=range] { flex: 1; accent-color: var(--gold); height: 4px; }
+  .seg2 { padding: 2px 12px; border: 1px solid var(--divider); border-radius: 9px; cursor: pointer; color: var(--green); font-weight: 700; text-transform: uppercase; font-size: 9.5px; letter-spacing: .08em; }
+  .seg2.off { color: var(--faint); }
+  .seg2:hover { border-color: var(--cyan); }
+  .lnk { cursor: pointer; color: var(--cyan-text); text-decoration: underline dotted; font-size: 11px; }
+  .lnk:hover { color: var(--gold); }
+  .lnk.clr { color: var(--faint); }
   .sec { padding: 8px 12px 4px; }
   .sec-h { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none;
     font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--cyan-dim); padding: 4px 0; }
@@ -85,7 +95,12 @@
 </head>
 <body>
 <div id="panel">
-  <div class="head"><span class="diamond"></span><h1>Mining Assistant</h1><span class="x" id="testBtn" title="Test alert sound" style="font-size:12px">🔊</span><span class="x" id="closeBtn" title="Hide (tray to reopen)">✕</span></div>
+  <div class="head"><span class="diamond"></span><h1>Mining Assistant</h1><span class="x" id="setBtn" title="Audio settings" style="font-size:12px">⚙</span><span class="x" id="testBtn" title="Test alert sound" style="font-size:12px">🔊</span><span class="x" id="closeBtn" title="Hide (tray to reopen)">✕</span></div>
+  <div id="setPanel" class="setpanel hidden">
+    <div class="setrow"><span class="k">HAL voice</span><span class="seg2" id="voiceBtn">on</span></div>
+    <div class="setrow"><span class="k">Volume</span><input type="range" id="volSlider" min="0" max="100" step="1"></div>
+    <div class="setrow"><span class="k">Alert tone</span><span class="lnk" id="toneBtn">choose WAV…</span><span class="lnk clr hidden" id="toneClr">default</span></div>
+  </div>
 
   <div class="sec">
     <div class="sec-h" data-sec="scan"><span class="car">▾</span>Signature Scanner<span class="badge" id="scanBadge"></span></div>
@@ -114,10 +129,16 @@
   const targetSet = new Set();
 
   // ---- audio + speech ----
+  // User prefs (window-local): master volume (0–1), HAL-voice on/off. Both routed through
+  // a master gain so the volume slider scales tones + clips + the alarm.
+  const getVol = () => { const v = parseFloat(localStorage.getItem("miningVol")); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); };
+  const voiceOn = () => localStorage.getItem("miningVoice") !== "off";
+
   function speak(text) {
-    try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.volume = 1; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch {}
+    if (!voiceOn()) return;
+    try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.volume = getVol(); speechSynthesis.cancel(); speechSynthesis.speak(u); } catch {}
   }
-  let actx = null;
+  let actx = null, master = null;
   // A Web-Audio context created outside a user gesture starts "suspended" (silent). Create
   // it lazily and resume it here + on first interaction so alert tones always sound.
   function ensureActx() {
@@ -126,20 +147,45 @@
     return actx;
   }
   ["pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, ensureActx));
+  function masterGain() {
+    const ax = ensureActx(); if (!ax) return null;
+    if (!master) { master = ax.createGain(); master.connect(ax.destination); }
+    master.gain.value = getVol();
+    return master;
+  }
   function tone(freq, ms, type) {
     try {
-      if (!ensureActx()) return;
+      const dest = masterGain(); if (!dest) return;
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = type || "sine"; o.frequency.value = freq;
-      o.connect(g); g.connect(actx.destination);
+      o.connect(g); g.connect(dest);
       const t = actx.currentTime; g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000);
       o.start(t); o.stop(t + ms / 1000 + 0.02);
     } catch {}
   }
-  const chime = () => { tone(880, 140, "triangle"); setTimeout(() => tone(1320, 220, "triangle"), 150); };
-  const alarm = () => { let n = 0; const iv = setInterval(() => { tone(660, 180, "square"); if (++n >= 4) clearInterval(iv); }, 260); };
+  // A single alert cue — a user-supplied WAV (served at /api/mining/tone) if set, else the
+  // built-in synth. `dbl` plays the two-note built-in default for the mission-complete alarm.
+  let toneBuf = undefined; // undefined=unloaded, null=none, AudioBuffer=custom
+  async function loadTone() {
+    if (toneBuf !== undefined) return toneBuf;
+    const ax = ensureActx();
+    try {
+      const r = await fetch("api/mining/tone");
+      toneBuf = r.ok ? await ax.decodeAudioData(await r.arrayBuffer()) : null;
+    } catch { toneBuf = null; }
+    return toneBuf;
+  }
+  async function cue(dbl) {
+    const buf = await loadTone();
+    const dest = masterGain(); if (!dest) return;
+    if (buf) { const s = actx.createBufferSource(); s.buffer = buf; s.connect(dest); s.start(); return; }
+    tone(880, 140, "triangle"); setTimeout(() => tone(1320, 220, "triangle"), 150);
+    if (dbl) setTimeout(() => tone(1320, 220, "triangle"), 320);
+  }
+  const chime = () => cue(false);
+  const alarm = () => cue(true);
 
   // HAL voice clips (concatenative). Decode each .ogg once, then schedule a sequence
   // back-to-back for gapless playback. Falls back to Windows TTS if any clip is missing
@@ -155,11 +201,12 @@
     return clipCache[slug];
   }
   async function speakClips(slugs, fallbackText) {
-    const ax = ensureActx(); if (!ax) { speak(fallbackText); return; }
+    if (!voiceOn()) return;               // voice muted -> alerts are tone-only
+    const dest = masterGain(); if (!dest) { speak(fallbackText); return; }
     const bufs = await Promise.all(slugs.map(loadClip));
     if (bufs.some((b) => !b)) { speak(fallbackText); return; }
-    let t = ax.currentTime + 0.04;
-    for (const b of bufs) { const s = ax.createBufferSource(); s.buffer = b; s.connect(ax.destination); s.start(t); t += b.duration; }
+    let t = actx.currentTime + 0.04;
+    for (const b of bufs) { const s = actx.createBufferSource(); s.buffer = b; s.connect(dest); s.start(t); t += b.duration; }
   }
   const nameSlug = (n) => "n_" + String(n || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const stationSlug = (s) => (s ? "st_" + String(s).toLowerCase().replace(/[^a-z0-9]/g, "") : null);
@@ -249,6 +296,35 @@
     });
   }, 1000);
 
+  // ---- audio settings panel ----
+  $("setBtn").addEventListener("click", () => $("setPanel").classList.toggle("hidden"));
+  const renderVoice = () => { const on = voiceOn(); $("voiceBtn").textContent = on ? "on" : "off"; $("voiceBtn").classList.toggle("off", !on); };
+  $("voiceBtn").addEventListener("click", () => { localStorage.setItem("miningVoice", voiceOn() ? "off" : "on"); renderVoice(); });
+  $("volSlider").value = Math.round(getVol() * 100);
+  $("volSlider").addEventListener("input", () => { localStorage.setItem("miningVol", ($("volSlider").value / 100).toString()); if (master) master.gain.value = getVol(); });
+  renderVoice();
+  let cfg = {};
+  async function loadCfg() {
+    try { cfg = await fetch("api/config").then((r) => r.json()); } catch {}
+    $("toneClr").classList.toggle("hidden", !cfg.miningTone);
+  }
+  $("toneBtn").addEventListener("click", async () => {
+    if (!window.miningApi || !window.miningApi.pickTone) return;
+    if (await window.miningApi.pickTone()) { toneBuf = undefined; cue(false); loadCfg(); }
+  });
+  $("toneClr").addEventListener("click", async () => {
+    if (window.miningApi && window.miningApi.clearTone) await window.miningApi.clearTone();
+    toneBuf = null; loadCfg();
+  });
+  loadCfg();
+  window.addEventListener("focus", loadCfg); // pick up auto-show / tone changes from Settings
+
+  // Auto-show: pop the window when mining/scanning is detected, unless the user just hid it.
+  let autoSuppress = 0;
+  function maybeAutoShow() {
+    if (cfg.miningAutoShow && Date.now() > autoSuppress && window.miningApi && window.miningApi.show) window.miningApi.show();
+  }
+
   // ---- events ----
   $("targets").addEventListener("click", (e) => {
     const rk = e.target.closest(".rk"); if (!rk) return;
@@ -268,7 +344,7 @@
     const open = body.classList.toggle("hidden");
     h.querySelector(".car").style.transform = open ? "rotate(-90deg)" : "";
   }));
-  $("closeBtn").addEventListener("click", () => { if (window.miningApi) window.miningApi.hide(); });
+  $("closeBtn").addEventListener("click", () => { autoSuppress = Date.now() + 90000; if (window.miningApi) window.miningApi.hide(); });
   $("testBtn").addEventListener("click", () => { ensureActx(); chime(); speakClips(["c_thatlookslike", "n_gold"], "Mining assistant ready"); });
   function renderSpeakMode() {
     const m = localStorage.getItem("miningSpeakMode") || "target";
@@ -280,17 +356,21 @@
   }));
   renderSpeakMode();
 
-  let lastScanSig = null;
+  let lastScanSig = null, lastJobCount = 0;
   function applyState(v) {
     view = v;
     targetSet.clear(); (v.targets || []).forEach(t => targetSet.add(t));
     renderAll();
     const sc = v.scan;
     if (sc && sc.signature !== lastScanSig) { lastScanSig = sc.signature; onNewScan(sc); }
+    const jc = (v.jobs || []).length;
+    if (jc > lastJobCount) maybeAutoShow(); // a newly-read refinery job -> pop up
+    lastJobCount = jc;
   }
   // A newly-scanned rock: flash + chime + speak on a target (always), or on any rock in
   // "every" announce mode. Debris (no table match) is visual-only.
   function onNewScan(sc) {
+    maybeAutoShow();                 // any new scan means the player is mining/scanning
     if (!sc.matches.length) return;
     const isTarget = sc.matches.some((m) => targetSet.has(m.name));
     if (isTarget) { const el = $("scanNow"); el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); chime(); }
