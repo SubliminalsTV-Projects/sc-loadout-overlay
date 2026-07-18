@@ -8,6 +8,7 @@ import { LogWatcher } from "./watcher.js";
 import { parseLine } from "./parser.js";
 import { parseMissionEvent } from "./missions-parser.js";
 import { MissionTracker } from "./missions.js";
+import { MiningTracker } from "./mining.js";
 import { SiteSync } from "./sync.js";
 import { assetDir } from "./paths.js";
 import { loadCatalog, readScreenshot, type CatalogEntry } from "./screen-read.js";
@@ -76,6 +77,9 @@ interface Config {
    *  game.log can't give — it sees every accepted mission equally). Independent of fabCapture;
    *  either one arms the capture loop. Read by electron/capture.cjs each poll. */
   missionOcr: boolean;
+  /** Mining Assistant: arms the capture loop to read the Refinement Center (job timers)
+   *  and the mining scanner signature. Opt-in; read by electron/capture.cjs each poll. */
+  miningAssistant: boolean;
   /** GPU hardware acceleration for the Electron overlay. OFF by default — it composites
    *  a transparent window over a Vulkan game and crashes AMD drivers; software rendering
    *  is safe. Read by electron/main.cjs at startup (needs an app restart to change). */
@@ -122,6 +126,7 @@ const DEFAULTS: Config = {
   syncEnabled: false,
   fabCapture: false,
   missionOcr: false,
+  miningAssistant: false,
   hwAccel: false,
   amdCompat: false,
   bindingPng: "",
@@ -299,6 +304,18 @@ function broadcastMissions(): void {
   for (const res of missionClients) res.write(data);
 }
 tracker.on("change", broadcastMissions);
+
+// ── Mining Assistant (signature scanner + refinery timer) ────────────────────
+const mining = new MiningTracker({ dataDir, stateDir: userDir });
+const miningClients = new Set<ServerResponse>();
+function miningSend(msg: unknown): void {
+  const data = `data: ${JSON.stringify(msg)}\n\n`;
+  for (const res of miningClients) res.write(data);
+}
+mining.on("change", () => miningSend({ kind: "state", view: mining.view() }));
+// Transient alerts the overlay turns into TTS + sound + a flash.
+mining.on("target-hit", (hit) => miningSend({ kind: "target-hit", hit }));
+mining.on("refinery-done", (job) => miningSend({ kind: "refinery-done", job }));
 
 // Is SubliminalsTV live on Twitch? Polled via sc-feed's public twitch proxy (which holds the
 // Twitch credentials) so the distributed app never embeds secrets. Drives the overlay diamond
@@ -530,9 +547,43 @@ const server = createServer(async (req, res) => {
     if (typeof body.path === "string" && body.path) {
       if (!screenCatalog) screenCatalog = loadCatalog(dataDir);
       result = await readScreenshot(body.path, screenCatalog);
+      // Mining Assistant reads are fed straight to its tracker (same process); the
+      // mission/fabricator reads are still routed by capture.cjs off the returned result.
+      const rd = result as { kind?: string; signature?: number };
+      if (rd.kind === "refinery") mining.applyRefineryRead(result as never);
+      else if (rd.kind === "mineable" && typeof rd.signature === "number") mining.applyMineableRead(rd.signature);
     }
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(result));
+    return;
+  }
+
+  // Mining Assistant: live state stream + snapshot + controls.
+  if (url === "/mining/events") {
+    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
+    res.write("\n");
+    miningClients.add(res);
+    res.write(`data: ${JSON.stringify({ kind: "state", view: mining.view() })}\n\n`);
+    req.on("close", () => miningClients.delete(res));
+    return;
+  }
+  if (url === "/api/mining" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(mining.view()));
+    return;
+  }
+  if (url === "/api/mining/target" && req.method === "POST") {
+    const body = await readBody(req);
+    if (typeof body.name === "string") mining.setTarget(body.name, body.on !== false);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (url === "/api/mining/remove-job" && req.method === "POST") {
+    const body = await readBody(req);
+    if (typeof body.id === "string") mining.removeJob(body.id);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
     return;
   }
 
@@ -627,6 +678,7 @@ const server = createServer(async (req, res) => {
     if (body.clearToken === true) config.syncToken = "";
     if (typeof body.fabCapture === "boolean") config.fabCapture = body.fabCapture;
     if (typeof body.missionOcr === "boolean") config.missionOcr = body.missionOcr;
+    if (typeof body.miningAssistant === "boolean") config.miningAssistant = body.miningAssistant;
     // GPU accel is read by electron/main.cjs at startup; persist here, restart applies it.
     if (typeof body.hwAccel === "boolean") config.hwAccel = body.hwAccel;
     if (typeof body.amdCompat === "boolean") config.amdCompat = body.amdCompat;

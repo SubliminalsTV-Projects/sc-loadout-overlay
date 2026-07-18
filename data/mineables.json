@@ -1,0 +1,1436 @@
+{
+ "schema": "sc-mineables/1",
+ "source": "SubliminalsTV mining signature table",
+ "rocks": [
+  {
+   "name": "Quantainium",
+   "rarity": "Legendary",
+   "base": 3170,
+   "sigs": [
+    3170,
+    6340,
+    9510,
+    12680,
+    15850,
+    19020
+   ]
+  },
+  {
+   "name": "Stileron",
+   "rarity": "Legendary",
+   "base": 3185,
+   "sigs": [
+    3185,
+    6370,
+    9555,
+    12740,
+    15925,
+    19110
+   ]
+  },
+  {
+   "name": "Savrilium",
+   "rarity": "Legendary",
+   "base": 3200,
+   "sigs": [
+    3200,
+    6400,
+    9600,
+    12800,
+    16000,
+    19200
+   ]
+  },
+  {
+   "name": "Ouratite",
+   "rarity": "Epic",
+   "base": 3370,
+   "sigs": [
+    3370,
+    6740,
+    10110,
+    13480,
+    16850,
+    20220
+   ]
+  },
+  {
+   "name": "Riccite",
+   "rarity": "Epic",
+   "base": 3385,
+   "sigs": [
+    3385,
+    6770,
+    10155,
+    13540,
+    16925,
+    20310
+   ]
+  },
+  {
+   "name": "Lindinium",
+   "rarity": "Epic",
+   "base": 3400,
+   "sigs": [
+    3400,
+    6800,
+    10200,
+    13600,
+    17000,
+    20400
+   ]
+  },
+  {
+   "name": "Beryl",
+   "rarity": "Rare",
+   "base": 3540,
+   "sigs": [
+    3540,
+    7080,
+    10620,
+    14160,
+    17700,
+    21240
+   ]
+  },
+  {
+   "name": "Taranite",
+   "rarity": "Rare",
+   "base": 3555,
+   "sigs": [
+    3555,
+    7110,
+    10665,
+    14220,
+    17775,
+    21330
+   ]
+  },
+  {
+   "name": "Borase",
+   "rarity": "Rare",
+   "base": 3570,
+   "sigs": [
+    3570,
+    7140,
+    10710,
+    14280,
+    17850,
+    21420
+   ]
+  },
+  {
+   "name": "Gold",
+   "rarity": "Rare",
+   "base": 3585,
+   "sigs": [
+    3585,
+    7170,
+    10755,
+    14340,
+    17925,
+    21510
+   ]
+  },
+  {
+   "name": "Bexalite",
+   "rarity": "Rare",
+   "base": 3600,
+   "sigs": [
+    3600,
+    7200,
+    10800,
+    14400,
+    18000,
+    21600
+   ]
+  },
+  {
+   "name": "Laranite",
+   "rarity": "Uncommon",
+   "base": 3825,
+   "sigs": [
+    3825,
+    7650,
+    11475,
+    15300,
+    19125,
+    22950
+   ]
+  },
+  {
+   "name": "Aslarite",
+   "rarity": "Uncommon",
+   "base": 3840,
+   "sigs": [
+    3840,
+    7680,
+    11520,
+    15360,
+    19200,
+    23040
+   ]
+  },
+  {
+   "name": "Titanium",
+   "rarity": "Uncommon",
+   "base": 3855,
+   "sigs": [
+    3855,
+    7710,
+    11565,
+    15420,
+    19275,
+    23130
+   ]
+  },
+  {
+   "name": "Tungsten",
+   "rarity": "Uncommon",
+   "base": 3870,
+   "sigs": [
+    3870,
+    7740,
+    11610,
+    15480,
+    19350,
+    23220
+   ]
+  },
+  {
+   "name": "Agricium",
+   "rarity": "Uncommon",
+   "base": 3885,
+   "sigs": [
+    3885,
+    7770,
+    11655,
+    15540,
+    19425,
+    23310
+   ]
+  },
+  {
+   "name": "Torite",
+   "rarity": "Uncommon",
+   "base": 3900,
+   "sigs": [
+    3900,
+    7800,
+    11700,
+    15600,
+    19500,
+    23400
+   ]
+  },
+  {
+   "name": "Hephaestanite",
+   "rarity": "Common",
+   "base": 4180,
+   "sigs": [
+    4180,
+    8360,
+    12540,
+    16720,
+    20900,
+    25080
+   ]
+  },
+  {
+   "name": "Tin",
+   "rarity": "Common",
+   "base": 4195,
+   "sigs": [
+    4195,
+    8390,
+    12585,
+    16780,
+    20975,
+    25170
+   ]
+  },
+  {
+   "name": "Quartz",
+   "rarity": "Common",
+   "base": 4210,
+   "sigs": [
+    4210,
+    8420,
+    12630,
+    16840,
+    21050,
+    25260
+   ]
+  },
+  {
+   "name": "Corundum",
+   "rarity": "Common",
+   "base": 4225,
+   "sigs": [
+    4225,
+    8450,
+    12675,
+    16900,
+    21125,
+    25350
+   ]
+  },
+  {
+   "name": "Copper",
+   "rarity": "Common",
+   "base": 4240,
+   "sigs": [
+    4240,
+    8480,
+    12720,
+    16960,
+    21200,
+    25440
+   ]
+  },
+  {
+   "name": "Silicon",
+   "rarity": "Common",
+   "base": 4255,
+   "sigs": [
+    4255,
+    8510,
+    12765,
+    17020,
+    21275,
+    25530
+   ]
+  },
+  {
+   "name": "Iron",
+   "rarity": "Common",
+   "base": 4270,
+   "sigs": [
+    4270,
+    8540,
+    12810,
+    17080,
+    21350,
+    25620
+   ]
+  },
+  {
+   "name": "Aluminum",
+   "rarity": "Common",
+   "base": 4285,
+   "sigs": [
+    4285,
+    8570,
+    12855,
+    17140,
+    21425,
+    25710
+   ]
+  },
+  {
+   "name": "Ice",
+   "rarity": "Common",
+   "base": 4300,
+   "sigs": [
+    4300,
+    8600,
+    12900,
+    17200,
+    21500,
+    25800
+   ]
+  }
+ ],
+ "index": {
+  "3170": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 1
+   }
+  ],
+  "3185": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 1
+   }
+  ],
+  "3200": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 1
+   }
+  ],
+  "3370": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 1
+   }
+  ],
+  "3385": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 1
+   }
+  ],
+  "3400": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 1
+   }
+  ],
+  "3540": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 1
+   }
+  ],
+  "3555": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 1
+   }
+  ],
+  "3570": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 1
+   }
+  ],
+  "3585": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 1
+   }
+  ],
+  "3600": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 1
+   }
+  ],
+  "3825": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "3840": [
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "3855": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "3870": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "3885": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "3900": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 1
+   }
+  ],
+  "4180": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4195": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4210": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4225": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4240": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4255": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4270": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4285": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "4300": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 1
+   }
+  ],
+  "6340": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 2
+   }
+  ],
+  "6370": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 2
+   }
+  ],
+  "6400": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 2
+   }
+  ],
+  "6740": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 2
+   }
+  ],
+  "6770": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 2
+   }
+  ],
+  "6800": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 2
+   }
+  ],
+  "7080": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 2
+   }
+  ],
+  "7110": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 2
+   }
+  ],
+  "7140": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 2
+   }
+  ],
+  "7170": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 2
+   }
+  ],
+  "7200": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 2
+   }
+  ],
+  "7650": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "7680": [
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "7710": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "7740": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "7770": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "7800": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 2
+   }
+  ],
+  "8360": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8390": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8420": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8450": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8480": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8510": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8540": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8570": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "8600": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 2
+   }
+  ],
+  "9510": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 3
+   }
+  ],
+  "9555": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 3
+   }
+  ],
+  "9600": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 3
+   }
+  ],
+  "10110": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 3
+   }
+  ],
+  "10155": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 3
+   }
+  ],
+  "10200": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 3
+   }
+  ],
+  "10620": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 3
+   }
+  ],
+  "10665": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 3
+   }
+  ],
+  "10710": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 3
+   }
+  ],
+  "10755": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 3
+   }
+  ],
+  "10800": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 3
+   }
+  ],
+  "11475": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "11520": [
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "11565": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "11610": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "11655": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "11700": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 3
+   }
+  ],
+  "12540": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12585": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12630": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12675": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12680": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 4
+   }
+  ],
+  "12720": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12740": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 4
+   }
+  ],
+  "12765": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12800": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 4
+   }
+  ],
+  "12810": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12855": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "12900": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 3
+   }
+  ],
+  "13480": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 4
+   }
+  ],
+  "13540": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 4
+   }
+  ],
+  "13600": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 4
+   }
+  ],
+  "14160": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 4
+   }
+  ],
+  "14220": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 4
+   }
+  ],
+  "14280": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 4
+   }
+  ],
+  "14340": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 4
+   }
+  ],
+  "14400": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 4
+   }
+  ],
+  "15300": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15360": [
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15420": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15480": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15540": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15600": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 4
+   }
+  ],
+  "15850": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 5
+   }
+  ],
+  "15925": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 5
+   }
+  ],
+  "16000": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 5
+   }
+  ],
+  "16720": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "16780": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "16840": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "16850": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 5
+   }
+  ],
+  "16900": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "16925": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 5
+   }
+  ],
+  "16960": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "17000": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 5
+   }
+  ],
+  "17020": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "17080": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "17140": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "17200": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 4
+   }
+  ],
+  "17700": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 5
+   }
+  ],
+  "17775": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 5
+   }
+  ],
+  "17850": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 5
+   }
+  ],
+  "17925": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 5
+   }
+  ],
+  "18000": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 5
+   }
+  ],
+  "19020": [
+   {
+    "name": "Quantainium",
+    "rarity": "Legendary",
+    "count": 6
+   }
+  ],
+  "19110": [
+   {
+    "name": "Stileron",
+    "rarity": "Legendary",
+    "count": 6
+   }
+  ],
+  "19125": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "19200": [
+   {
+    "name": "Savrilium",
+    "rarity": "Legendary",
+    "count": 6
+   },
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "19275": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "19350": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "19425": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "19500": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 5
+   }
+  ],
+  "20220": [
+   {
+    "name": "Ouratite",
+    "rarity": "Epic",
+    "count": 6
+   }
+  ],
+  "20310": [
+   {
+    "name": "Riccite",
+    "rarity": "Epic",
+    "count": 6
+   }
+  ],
+  "20400": [
+   {
+    "name": "Lindinium",
+    "rarity": "Epic",
+    "count": 6
+   }
+  ],
+  "20900": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "20975": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21050": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21125": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21200": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21240": [
+   {
+    "name": "Beryl",
+    "rarity": "Rare",
+    "count": 6
+   }
+  ],
+  "21275": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21330": [
+   {
+    "name": "Taranite",
+    "rarity": "Rare",
+    "count": 6
+   }
+  ],
+  "21350": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21420": [
+   {
+    "name": "Borase",
+    "rarity": "Rare",
+    "count": 6
+   }
+  ],
+  "21425": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21500": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 5
+   }
+  ],
+  "21510": [
+   {
+    "name": "Gold",
+    "rarity": "Rare",
+    "count": 6
+   }
+  ],
+  "21600": [
+   {
+    "name": "Bexalite",
+    "rarity": "Rare",
+    "count": 6
+   }
+  ],
+  "22950": [
+   {
+    "name": "Laranite",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "23040": [
+   {
+    "name": "Aslarite",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "23130": [
+   {
+    "name": "Titanium",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "23220": [
+   {
+    "name": "Tungsten",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "23310": [
+   {
+    "name": "Agricium",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "23400": [
+   {
+    "name": "Torite",
+    "rarity": "Uncommon",
+    "count": 6
+   }
+  ],
+  "25080": [
+   {
+    "name": "Hephaestanite",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25170": [
+   {
+    "name": "Tin",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25260": [
+   {
+    "name": "Quartz",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25350": [
+   {
+    "name": "Corundum",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25440": [
+   {
+    "name": "Copper",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25530": [
+   {
+    "name": "Silicon",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25620": [
+   {
+    "name": "Iron",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25710": [
+   {
+    "name": "Aluminum",
+    "rarity": "Common",
+    "count": 6
+   }
+  ],
+  "25800": [
+   {
+    "name": "Ice",
+    "rarity": "Common",
+    "count": 6
+   }
+  ]
+ }
+}

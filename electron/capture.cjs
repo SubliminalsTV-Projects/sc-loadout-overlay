@@ -171,7 +171,10 @@ function startFabCapture({ port, configDir, onStatus }) {
     // Either one arms the loop; each read is then gated by its own flag below.
     const fab = cfg.fabCapture === true;
     const miss = cfg.missionOcr === true;
-    if (!fab && !miss) { emitContext("off"); return; }
+    // The Mining Assistant (refinery timers + signature scanner) also reads the screen;
+    // refinery/mineable reads are routed to its tracker server-side in /api/screen-read.
+    const mining = cfg.miningAssistant === true;
+    if (!fab && !miss && !mining) { emitContext("off"); return; }
     if (busy) return;
     const proc = await foregroundProcess();
     if (!/^StarCitizen$/i.test(proc)) { emitContext("idle"); return; } // only ever look at SC

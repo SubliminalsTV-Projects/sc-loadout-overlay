@@ -30,8 +30,39 @@ export interface FabricatorRead {
   crop: Rect;               // render region to capture, in screenshot pixels
 }
 export interface MissionRead { kind: "mission"; titleRaw: string; }
+/** One active refinery job read off the Refinement Center's PROCESSING panel. */
+export interface RefineryJobRead {
+  remainingSec: number;     // parsed from "TIME REMAINING 41m 35s"
+  remainingRaw: string;     // "41m 35s"
+  material: string | null;  // yielded material label, e.g. "IRON"
+  yieldScu: number | null;  // yield in cSCU, e.g. 898.65
+}
+export interface RefineryRead {
+  kind: "refinery";
+  station: string | null;   // "LEVSKI"
+  jobs: RefineryJobRead[];   // the PROCESSING order(s) currently on screen
+}
+/** A scanned mineable's signature number (exact-lookup happens in the tracker). */
+export interface MineableRead { kind: "mineable"; signature: number; raw: string; }
 export interface NoneRead { kind: "none"; }
-export type ScreenRead = FabricatorRead | MissionRead | NoneRead;
+export type ScreenRead = FabricatorRead | MissionRead | RefineryRead | MineableRead | NoneRead;
+
+/** Refined/ore material names the refinery yields — the vocabulary for reading a job's
+ *  material label, so a mis-OCR'd column header can't be mistaken for it. */
+const REFINERY_MATERIALS = new Set([
+  "IRON", "ALUMINUM", "ALUMINIUM", "TITANIUM", "TUNGSTEN", "QUANTAINIUM", "GOLD", "CORUNDUM", "COPPER", "TIN",
+  "QUARTZ", "HEPHAESTANITE", "LARANITE", "AGRICIUM", "BORASE", "BEXALITE", "TARANITE", "ASLARITE", "BERYL",
+  "DIAMOND", "SILICON", "STILERON", "SAVRILIUM", "OURATITE", "RICCITE", "LINDINIUM", "TORITE", "ICE",
+]);
+
+/** Parse an SC duration string ("41m 35s", "14h 53m", "1 h 5 m") to seconds, or null. */
+export function parseDuration(text: string): number | null {
+  const h = /(\d+)\s*h/i.exec(text)?.[1];
+  const m = /(\d+)\s*m(?![a-z])/i.exec(text)?.[1];
+  const s = /(\d+)\s*s(?![a-z])/i.exec(text)?.[1];
+  if (h == null && m == null && s == null) return null;
+  return (Number(h ?? 0) * 3600) + (Number(m ?? 0) * 60) + Number(s ?? 0);
+}
 
 // ---- Windows OCR bridge (WinRT via PowerShell) --------------------------------
 
@@ -239,6 +270,40 @@ export function classifyScreen(ocr: OcrResult, catalog: CatalogEntry[]): ScreenR
         return { kind: "fabricator", nameRaw, name, item, match, crop };
       }
     }
+  }
+
+  // Refinement Center: read each active PROCESSING order's "TIME REMAINING" countdown so
+  // the tracker can alarm when a refine finishes. Only "TIME REMAINING" counts (a running
+  // job) — a SETUP order's "PROCESSING TIME" is an estimate, not a countdown, so it's
+  // excluded. Station is the header line left of the title; material/yield are best-effort
+  // labels from the same panel column.
+  if (/refinement\s+cent(?:er|re)/i.test(joined)) {
+    const anchor = lines.find((l) => /refinement\s+cent(?:er|re)/i.test(l.text));
+    const station = anchor
+      ? lines.filter((l) => Math.abs(l.y - anchor.y) < 26 && l.x < anchor.x - 80).sort((a, b) => a.x - b.x).pop()?.text.trim() ?? null
+      : null;
+    const jobs: RefineryJobRead[] = [];
+    for (const tr of lines.filter((l) => /time\s+remaining/i.test(l.text))) {
+      const valLine = lines.filter((l) => Math.abs(l.y - tr.y) < 24 && l.x > tr.x).sort((a, b) => a.x - b.x)[0];
+      const sec = valLine ? parseDuration(valLine.text) : null;
+      if (sec == null || sec <= 0) continue;
+      // Material = the nearest known refinery material above the timer in this panel.
+      // Matching a fixed vocabulary (not "any all-caps line") keeps a garbled column
+      // header like "QUALITY"->"OUAUTY" from winning.
+      const mat = lines
+        .filter((l) => Math.abs(l.x - tr.x) < 360 && l.y < tr.y && REFINERY_MATERIALS.has(l.text.trim().toUpperCase().replace(/[^A-Z]/g, "")))
+        .sort((a, b) => b.y - a.y)[0];
+      const yl = lines.find(
+        (l) => /^\d{1,4}\.\d+$/.test(l.text.trim()) && Math.abs(l.x - tr.x) < 420 && l.y < tr.y && l.y > tr.y - 150,
+      );
+      jobs.push({
+        remainingSec: sec,
+        remainingRaw: valLine!.text.trim(),
+        material: mat?.text.trim() ?? null,
+        yieldScu: yl ? Number(yl.text) : null,
+      });
+    }
+    if (jobs.length) return { kind: "refinery", station: station ?? null, jobs };
   }
 
   // Tracked-mission read: an OBJECTIVE line anchors the panel; the mission TITLE is the

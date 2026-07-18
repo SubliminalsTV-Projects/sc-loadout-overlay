@@ -245,6 +245,32 @@ function toggleBinding() {
   bindingWin.showInactive();
 }
 
+// ── Mining Assistant window ───────────────────────────────────────────────────
+// A separate, INTERACTIVE always-on-top tool window (signature scanner + refinery
+// timers). Unlike the HUD it takes focus and clicks (target picker, remove buttons),
+// and the ✕ hides it rather than destroying it so countdowns + state persist.
+let miningWin = null;
+function createMining() {
+  const { workArea } = screen.getPrimaryDisplay();
+  miningWin = new BrowserWindow({
+    width: 360, height: 600,
+    x: workArea.x + workArea.width - 384, y: workArea.y + 60,
+    frame: false, transparent: true, resizable: true, skipTaskbar: true,
+    alwaysOnTop: true, hasShadow: false, fullscreenable: false, focusable: true, show: false,
+    webPreferences: { contextIsolation: true, preload: path.join(__dirname, "mining-preload.cjs") },
+  });
+  miningWin.setAlwaysOnTop(true, "screen-saver");
+  miningWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  miningWin.loadURL(`http://localhost:${PORT}/mining.html?v=${Date.now()}`);
+  miningWin.on("close", (e) => { e.preventDefault(); miningWin.hide(); });
+}
+function toggleMining() {
+  if (!miningWin) createMining();
+  if (miningWin.isVisible()) { miningWin.hide(); return; }
+  miningWin.show();
+}
+ipcMain.on("mining:hide", () => { if (miningWin) miningWin.hide(); });
+
 // Live-rebindable global shortcut for the binding-chart overlay — swap it WITHOUT a restart.
 // Returns {ok:true} or {ok:false,error} so the config window can warn (invalid combo, or the
 // combo is already claimed by another app).
@@ -484,6 +510,7 @@ function refreshTray() {
           ]
         : [{ label: "Overlay off — tracking still running", enabled: false }]),
       { type: "separator" },
+      { label: "Mining Assistant", click: toggleMining },
       { label: "Refresh missions (re-read log)", click: refreshMissions },
       { label: "Verify from logs", click: verifyFromLogs },
       { label: "Open config…", click: openConfig },
