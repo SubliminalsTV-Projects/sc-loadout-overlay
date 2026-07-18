@@ -55,6 +55,29 @@ const REFINERY_MATERIALS = new Set([
   "DIAMOND", "SILICON", "STILERON", "SAVRILIUM", "OURATITE", "RICCITE", "LINDINIUM", "TORITE", "ICE",
 ]);
 
+/** Pull the scan signature number out of a HUD line. The value is comma-grouped thousands
+ *  ("2,000" / "3,170" / "25,800") preceded by a diamond/pin icon the OCR renders as stray
+ *  junk (a lone digit, dots) SEPARATED from the number — so anchoring on the comma group
+ *  isolates the real value. Normalizes the usual o->0 / l->1 OCR slips. Returns null when
+ *  no grouped number is present (e.g. the comma dropped — a later poll re-reads it). */
+export function parseSignature(text: string): number | null {
+  const t = text.replace(/[oO]/g, "0").replace(/[lI|]/g, "1");
+  const g = /(\d{1,2})[.,](\d{3})(?!\d)/.exec(t); // "3,170" / "25,800"
+  if (g) {
+    const v = Number(g[1] + g[2]);
+    return v >= 1000 && v <= 30000 ? v : null;
+  }
+  // Fallback: OCR dropped the comma ("2 2000"). Take a lone 4–5 digit run, word-boundaried
+  // so the separated icon-junk digit isn't glued on. Capped at 30000 (max signature 25800
+  // + margin) so an icon-merged "33170" is rejected rather than mis-read.
+  const runs = t.match(/(?<!\d)\d{4,5}(?!\d)/g);
+  if (runs && runs.length) {
+    const v = Number(runs[runs.length - 1]);
+    return v >= 1000 && v <= 30000 ? v : null;
+  }
+  return null;
+}
+
 /** Parse an SC duration string ("41m 35s", "14h 53m", "1 h 5 m") to seconds, or null. */
 export function parseDuration(text: string): number | null {
   const h = /(\d+)\s*h/i.exec(text)?.[1];
@@ -304,6 +327,23 @@ export function classifyScreen(ocr: OcrResult, catalog: CatalogEntry[]): ScreenR
       });
     }
     if (jobs.length) return { kind: "refinery", station: station ?? null, jobs };
+  }
+
+  // Mining scanner: a scanned mineable/debris shows a signature number floating just above
+  // screen-center (diamond/pin icon + comma-grouped value). No text labels it, so it's found
+  // positionally — a signature-shaped number in the central-upper band — and only while the
+  // scan HUD is up (guards against a stray centered number on some other screen). The tracker
+  // maps it to a rock; a value not in the table is salvage debris.
+  if (/scanning|ready to scan|\bstrong\b|\bmoderate\b|\bweak\b/i.test(joined)) {
+    const cx = ocr.w / 2, cy = ocr.h / 2;
+    const cands = lines
+      .filter((l) => l.y > cy - 0.24 * ocr.h && l.y < cy - 0.015 * ocr.h && Math.abs(l.x - cx) < 0.17 * ocr.w)
+      .map((l) => ({ l, sig: parseSignature(l.text) }))
+      .filter((c): c is { l: OcrLine; sig: number } => c.sig != null);
+    if (cands.length) {
+      cands.sort((a, b) => Math.abs(a.l.x - cx) - Math.abs(b.l.x - cx));
+      return { kind: "mineable", signature: cands[0].sig, raw: cands[0].l.text.trim() };
+    }
   }
 
   // Tracked-mission read: an OBJECTIVE line anchors the panel; the mission TITLE is the

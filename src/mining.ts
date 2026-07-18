@@ -73,8 +73,10 @@ export class MiningTracker extends EventEmitter {
    *  5 apart, so a tolerance would pick the wrong rock). Unknown numbers are ignored. */
   applyMineableRead(signature: number): void {
     if (!this.data) return;
-    const matches = this.data.index[String(signature)];
-    if (!matches || !matches.length) return;
+    const matches = this.data.index[String(signature)] ?? []; // empty = not a rock -> salvage debris
+    // Ignore a repeat read of the same signature (the loop polls the same rock every ~3s);
+    // only a CHANGED signature is news worth re-announcing.
+    if (this.scan && this.scan.signature === signature) return;
     this.scan = { signature, matches, at: Date.now() };
     const hit = matches.find((m) => this.targets.has(m.name));
     this.emit("change");

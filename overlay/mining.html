@@ -141,6 +141,13 @@
     if (!sc) { el.className = "scan-now empty"; el.textContent = "Scan a rock — I'll name it here."; return; }
     el.className = "scan-now";
     const m = sc.matches;
+    if (!m.length) {
+      // Not in the rock table -> salvage debris.
+      el.innerHTML = '<div class="rock" style="color:var(--cyan-dim)">Debris</div>' +
+        '<div class="meta">Salvageable — not a mineable rock</div>' +
+        '<div class="sig">signature ' + sc.signature.toLocaleString() + '</div>';
+      return;
+    }
     const main = m[0];
     const isTarget = m.some(x => targetSet.has(x.name));
     let html = '<div class="rock">' + escapeHtml(main.name) + rarPill(main.rarity) + '</div>' +
