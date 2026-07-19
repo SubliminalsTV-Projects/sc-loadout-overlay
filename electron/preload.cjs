@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld("overlayApi", {
   openSettings: () => ipcRenderer.send("overlay:open-settings"),
   // Open an external URL in the default browser (e.g. the live-on-Twitch diamond).
   openUrl: (url) => ipcRenderer.send("overlay:open-url", url),
+  // Global UI scale (percent): the page zooms its content; the window resizes to match so
+  // scaling up never clips the panel.
+  setScale: (pct) => ipcRenderer.send("overlay:set-scale", Number(pct) || 100),
 });

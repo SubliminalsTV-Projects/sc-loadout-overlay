@@ -60,6 +60,23 @@
   .saved.show { opacity: 1; }
   .hkbtn { min-width: 170px; }
   .hkbtn.capturing { border-color: var(--amber); color: var(--amber); background: rgba(255,178,49,.12); }
+  /* Themed dropdown (native <select> renders unstyled otherwise). */
+  select { -webkit-appearance: none; appearance: none; background: var(--field); border: 1px solid var(--line);
+    color: var(--text); padding: 9px 34px 9px 12px; font-family: var(--font-body); font-size: 14px;
+    border-radius: var(--radius-sm); cursor: pointer; transition: border-color .15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4.5l4 4 4-4' fill='none' stroke='%23ffb231' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; }
+  select:focus { outline: none; border-color: var(--amber); }
+  select option { background: var(--card-high); color: var(--text); }
+  /* Themed range sliders (override the .opt input 18px box for these). */
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; background: var(--line-strong);
+    border-radius: 999px; cursor: pointer; }
+  .opt input[type=range] { width: auto; height: 5px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--amber); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--amber); }
+  input[type=range]::-webkit-slider-thumb:hover { filter: brightness(1.1); }
+  .presets { display: flex; gap: 8px; margin-top: 8px; }
+  .presets button { flex: 1; padding: 7px 8px; font-size: 12.5px; }
   /* Loadout-overlay settings (erkul URLs + ship auto-switch) are hidden for normal users —
      they're Sub's stream-overlay feature. Revealed by the hidden unlock (title ×5). */
   body:not(.show-loadout) .loadout-only { display: none; }
@@ -202,6 +219,33 @@
   </div>
 
   <div class="card">
+    <div class="label">Overlay Appearance</div>
+    <label class="opt" style="margin-top:2px;">Theme
+      <select id="theme" onchange="save()" style="margin-left:auto;">
+        <option value="mobiglas">Mobiglas (default)</option>
+        <option value="drake">Drake Interplanetary</option>
+        <option value="auto">Auto — match my ship</option>
+      </select>
+    </label>
+    <div class="hint">Restyle the overlay to a Star Citizen ship manufacturer. <strong>Mobiglas</strong> is the clean default. <strong>Drake</strong> is rugged burnt-orange on gunmetal (with duct-tape corners). <strong>Auto</strong> matches the ship you're flying, read from your game log — currently Drake in a Drake ship, Mobiglas otherwise. Applies immediately.</div>
+    <label class="opt" style="margin-top:10px;">Angle — align to HUD
+      <input type="range" id="overlayTwist" min="-35" max="35" step="1" value="4" oninput="onTwist()" onchange="save()" style="flex:1; margin:0 10px; min-width:120px;" />
+      <span id="twistVal" style="min-width:42px; text-align:right; font-variant-numeric:tabular-nums;">4°</span>
+    </label>
+    <div class="hint">Tilt the panel left ↔ right (perspective) to line it up with an angled cockpit HUD. <strong>0°</strong> is flat; <strong>4°</strong> is the default.</div>
+    <label class="opt" style="margin-top:12px;">Size
+      <input type="range" id="overlayScale" min="50" max="200" step="5" value="100" oninput="onScale()" onchange="save()" style="flex:1; margin:0 10px; min-width:120px;" />
+      <span id="scaleVal" style="min-width:46px; text-align:right; font-variant-numeric:tabular-nums;">100%</span>
+    </label>
+    <div class="presets">
+      <button type="button" onclick="setScale(50)">1080p</button>
+      <button type="button" onclick="setScale(100)">Current</button>
+      <button type="button" onclick="setScale(200)">4K</button>
+    </div>
+    <div class="hint">Scale the whole overlay for your monitor — the window resizes to match. The presets are starting points; nudge the slider until it looks right.</div>
+  </div>
+
+  <div class="card">
     <div class="label">Overlay Performance</div>
     <label class="opt" style="margin-top:2px;">Show / hide hotkey
       <button type="button" id="overlayHotkeyBtn" class="hkbtn" onclick="startCaptureHotkey('overlay')">F3</button>
@@ -247,6 +291,10 @@
     document.getElementById("missionOcr").checked = !!cfg.missionOcr;
     document.getElementById("miningAutoShow").checked = !!cfg.miningAutoShow;
     document.getElementById("shareLogs").checked = !!cfg.shareLogs;
+    document.getElementById("theme").value = cfg.theme || "mobiglas";
+    document.getElementById("overlayTwist").value = cfg.overlayTwist ?? 4;
+    document.getElementById("overlayScale").value = cfg.overlayScale ?? 100;
+    onTwist(); onScale();
     // Put the saved key (truncated) right in the field so it's obvious one is connected.
     // Focusing clears it for a clean paste; the "…" guard in save() stops it being re-submitted.
     const tokenEl = document.getElementById("syncToken");
@@ -304,6 +352,17 @@
     cfg.activeUrl = url; renderList();
   }
 
+  function onTwist() {
+    document.getElementById("twistVal").textContent = (document.getElementById("overlayTwist").value || 0) + "°";
+  }
+  function onScale() {
+    document.getElementById("scaleVal").textContent = (document.getElementById("overlayScale").value || 100) + "%";
+  }
+  function setScale(pct) {
+    document.getElementById("overlayScale").value = pct;
+    onScale(); save();
+  }
+
   async function save() {
     cfg.logPath = document.getElementById("logPath").value.trim();
     cfg.autoSwitch = document.getElementById("autoSwitch").checked;
@@ -322,6 +381,9 @@
       missionOcr: document.getElementById("missionOcr").checked,
       miningAutoShow: document.getElementById("miningAutoShow").checked,
       shareLogs: document.getElementById("shareLogs").checked,
+      theme: document.getElementById("theme").value,
+      overlayTwist: parseInt(document.getElementById("overlayTwist").value, 10) || 0,
+      overlayScale: parseInt(document.getElementById("overlayScale").value, 10) || 100,
     };
     const token = document.getElementById("syncToken").value.trim();
     // The field may still show the truncated preview (contains "…"); only submit a real pasted token.

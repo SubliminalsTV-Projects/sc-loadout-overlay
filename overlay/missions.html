@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SC Blueprint Tracker</title>
 <script>/* AMD compatibility: apply the lite skin BEFORE first paint (no flash) when the shell asks for it. */
-  if (new URLSearchParams(location.search).has("lite")) document.documentElement.classList.add("amd-lite");</script>
+  if (new URLSearchParams(location.search).has("lite")) document.documentElement.classList.add("amd-lite");
+  /* Apply ?theme=/?twist=/?scale= overrides before first paint (testing + no flash); server prefs win once SSE connects. */
+  { const q = new URLSearchParams(location.search); const r = document.documentElement;
+    const t = q.get("theme"); if (t) r.setAttribute("data-theme", t);
+    const tw = q.get("twist"); if (tw !== null) r.style.setProperty("--twist", tw + "deg");
+    const sc = q.get("scale"); if (sc !== null) r.style.zoom = (Number(sc) || 100) / 100; }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -17,10 +22,38 @@
   :root {
     --cyan: #45D0E0; --cyan-bright: #7fe3ef; --cyan-text: #c4dbe6; --cyan-dim: #7fa7bb; --faint: #5d7e90;
     --gold: #FFD27A; --amber: #F5A623; --green: #2ee6a0; --red: #ff8478;
-    --border: rgba(92, 198, 224, 0.38); --divider: rgba(92, 198, 224, 0.16); --track: #0c1a26;
+    --border: rgba(var(--accent-rgb), 0.38); --divider: rgba(var(--accent-rgb), 0.16); --track: #0c1a26;
+    --accent-rgb: 69, 208, 224; --value-rgb: 255, 210, 122;
+    --panel-top: rgba(13,27,40,.72); --panel-bot: rgba(8,17,26,.8); --panel-solid: rgba(8,17,26,.95);
+    --menu-bg: #0a1822; --title: #eaf6fb; --scan: rgba(150,225,245,.06); --sheen: rgba(180,235,250,.09);
+    --strip: repeating-linear-gradient(90deg, rgba(var(--accent-rgb),.32) 0 3px, transparent 3px 8px);
+    --twist: 0deg;
     --sans: "Inter", system-ui, sans-serif;
     --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace;
   }
+
+  /* ── Drake Interplanetary theme (opt-in / auto-by-ship) — rugged salvage-yard
+       industrial: burnt-orange chrome on warm gunmetal, hot amber readouts, a
+       diagonal hazard-stripe divider, and duct-tape corners. Only the tokens change;
+       --border/--divider derive from --accent-rgb so they retint automatically. */
+  :root[data-theme="drake"] {
+    --cyan: #E4802F; --cyan-bright: #FBB24A; --cyan-text: #E7D6C0; --cyan-dim: #A88A66; --faint: #7A6650;
+    --gold: #FFC24A; --amber: #F6A93A; --green: #57C878; --red: #FF6B4A; --track: #1a1206;
+    --accent-rgb: 228, 128, 47; --value-rgb: 255, 194, 74;
+    --panel-top: rgba(31,23,14,.82); --panel-bot: rgba(16,11,6,.88); --panel-solid: rgba(16,11,6,.96);
+    --menu-bg: #150f08; --title: #FBEAD2; --scan: rgba(245,180,90,.05); --sheen: rgba(250,210,150,.06);
+    --strip: repeating-linear-gradient(45deg, rgba(228,128,47,.55) 0 7px, rgba(0,0,0,.55) 7px 14px);
+  }
+
+  /* Duct-tape corner accents — Drake's field-repair design language, so they belong to
+     the Drake theme only. Sit on the panel (tilt with it), hang off the corner, lap a
+     little onto it without covering the header/footer text. */
+  .tape { display: none; position: absolute; z-index: 6; pointer-events: none; user-select: none;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
+  :root[data-theme="drake"] #panel .tape { display: block; }
+  .tape.tl { width: 60px; top: -20px; left: -22px; transform: rotate(-50deg); }
+  .tape.br { width: 60px; bottom: -34px; right: -30px; transform: rotate(-19deg); }
+
   * { box-sizing: border-box; }
   html, body { margin: 0; background: transparent; }
   body { font-family: var(--sans); color: var(--cyan-text); }
@@ -28,30 +61,30 @@
   /* Thin, themed scrollbars (the default chrome is jarring on the HUD). */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(92, 198, 224, 0.28); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(92, 198, 224, 0.5); }
-  * { scrollbar-width: thin; scrollbar-color: rgba(92, 198, 224, 0.28) transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.28); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(var(--accent-rgb), 0.5); }
+  * { scrollbar-width: thin; scrollbar-color: rgba(var(--accent-rgb), 0.28) transparent; }
 
   #panel {
     position: relative; width: 380px; margin: 16px; border-radius: 12px;
-    background: linear-gradient(180deg, rgba(13, 27, 40, 0.72), rgba(8, 17, 26, 0.8));
+    background: linear-gradient(180deg, var(--panel-top), var(--panel-bot));
     border: 1px solid var(--border);
-    box-shadow: inset 0 0 0 1px rgba(92, 198, 224, 0.08), 0 8px 34px rgba(0, 0, 0, 0.45), 0 0 30px rgba(69, 208, 224, 0.16);
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.08), 0 8px 34px rgba(0, 0, 0, 0.45), 0 0 30px rgba(var(--accent-rgb), 0.16);
     -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
     /* Subtle helmet-projection tilt (matches the stream overlays). Y-axis ONLY: rotateX
        tilts around the horizontal axis, so with perspective the horizontal scale varies
        down the panel — a tall pool projected wider at the bottom, overflowing the
        viewport into a horizontal scrollbar. rotateY displaces X by X (never by Y), so
        the horizontal extent stays constant however tall the content grows. */
-    transform: perspective(1700px) rotateY(4deg);
+    transform: perspective(1700px) rotateY(var(--twist, 4deg));
     transform-origin: 60% center;
   }
   /* CRT scanlines */
   #panel::before { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
-    background: repeating-linear-gradient(0deg, rgba(150, 225, 245, 0.06) 0 1px, transparent 1px 3px); mix-blend-mode: screen; }
+    background: repeating-linear-gradient(0deg, var(--scan) 0 1px, transparent 1px 3px); mix-blend-mode: screen; }
   /* visor sheen */
   #panel::after { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
-    background: linear-gradient(180deg, rgba(180, 235, 250, 0.09), transparent 36%); }
+    background: linear-gradient(180deg, var(--sheen), transparent 36%); }
   #panel.empty .pool, #panel.empty .catbar, #panel.empty .head .progress { display: none; }
 
   /* AMD compatibility "lite" skin (added on <html> via ?lite): strip everything that forces
@@ -60,22 +93,22 @@
      are the transparent-overlay-on-AMD device-lost/TDR trigger. Panel bg goes near-opaque so
      text stays legible without the blur. */
   html.amd-lite #panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-    background: rgba(8, 17, 26, 0.95) !important; transform: none !important; }
+    background: var(--panel-solid) !important; transform: none !important; }
   html.amd-lite #panel::before, html.amd-lite #panel::after { display: none !important; }
   html.amd-lite #moveBanner { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   html.amd-lite *, html.amd-lite *::before, html.amd-lite *::after { animation: none !important; transition: none !important; }
 
   /* Move/reposition mode: whole panel becomes a drag surface with a banner. */
   #moveBanner { display: none; position: absolute; inset: 0; z-index: 50; -webkit-app-region: drag; cursor: move;
-    background: rgba(69, 208, 224, 0.12); -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
+    background: rgba(var(--accent-rgb), 0.12); -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
   #panel.moving #moveBanner { display: flex; align-items: center; justify-content: center; }
   .movebox { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 4px;
     border: 1px solid var(--cyan); background: rgba(8, 17, 26, 0.92); color: var(--cyan-text);
     font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   #moveDone { -webkit-app-region: no-drag; cursor: pointer; font-family: var(--sans); font-size: 11px; font-weight: 700;
     letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 12px; border-radius: 3px;
-    border: 1px solid var(--cyan); background: rgba(69, 208, 224, 0.15); color: var(--cyan); }
-  #moveDone:hover { background: rgba(69, 208, 224, 0.3); }
+    border: 1px solid var(--cyan); background: rgba(var(--accent-rgb), 0.15); color: var(--cyan); }
+  #moveDone:hover { background: rgba(var(--accent-rgb), 0.3); }
 
   /* Grab handle: a discoverable "move" affordance that fades in on hover (Electron
      only). Clicking it drops into move mode — the reliable, hover-suspended drag. */
@@ -85,7 +118,7 @@
     background: rgba(8, 17, 26, 0.72); color: var(--cyan); opacity: 0; transition: opacity 0.15s ease; }
   #grip svg { width: 14px; height: 14px; display: block; }
   #panel.electron #grip { display: grid; opacity: 0.85; }
-  #grip:hover { opacity: 1 !important; background: rgba(69, 208, 224, 0.2); }
+  #grip:hover { opacity: 1 !important; background: rgba(var(--accent-rgb), 0.2); }
   #panel.moving #grip { display: none; }
 
   /* Settings cog (top-right) — hover-revealed like the grip, so the resting overlay stays
@@ -95,17 +128,17 @@
     border: 1px solid var(--border); border-radius: 4px; background: rgba(8, 17, 26, 0.72);
     color: var(--cyan); font-size: 14px; line-height: 1; opacity: 0.85; transition: opacity 0.15s ease; }
   #cog.open { opacity: 1; }
-  #cog:hover { opacity: 1; background: rgba(69, 208, 224, 0.2); }
+  #cog:hover { opacity: 1; background: rgba(var(--accent-rgb), 0.2); }
   #panel.moving #cog { display: none; }
   #cogMenu { display: none; position: absolute; top: 37px; right: 11px; z-index: 31; width: 232px;
-    -webkit-app-region: no-drag; background: #0a1822; border: 1px solid var(--border); border-radius: 4px;
+    -webkit-app-region: no-drag; background: var(--menu-bg); border: 1px solid var(--border); border-radius: 4px;
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); padding: 6px 0 8px; }
   #cogMenu.open { display: block; }
   #cogMenu .cog-sec { font-family: var(--sans); font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em;
     text-transform: uppercase; color: var(--cyan-dim); padding: 8px 12px 4px; }
   #cogMenu .cog-opt { display: flex; align-items: center; gap: 9px; padding: 6px 12px; cursor: pointer;
     font-family: var(--sans); font-size: 12px; color: var(--cyan-text); }
-  #cogMenu .cog-opt:hover { background: rgba(69, 208, 224, 0.12); }
+  #cogMenu .cog-opt:hover { background: rgba(var(--accent-rgb), 0.12); }
   #cogMenu .cog-opt input { width: 15px; height: 15px; accent-color: var(--cyan); cursor: pointer; }
   #cogMenu .cog-ocr { padding: 2px 12px 4px; font-size: 10.5px; line-height: 1.55; color: var(--cyan-dim); }
   #cogMenu .cog-ocr b { color: var(--cyan-text); font-weight: 600; }
@@ -118,9 +151,9 @@
   /* Cog action button (Verify) + inline status line. */
   #cogMenu .cog-btn { display: block; width: calc(100% - 24px); margin: 5px 12px 2px; padding: 7px 10px;
     text-align: center; font-family: var(--sans); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em;
-    cursor: pointer; color: var(--cyan-text); background: rgba(69, 208, 224, 0.1);
+    cursor: pointer; color: var(--cyan-text); background: rgba(var(--accent-rgb), 0.1);
     border: 1px solid var(--border); border-radius: 4px; }
-  #cogMenu .cog-btn:hover { background: rgba(69, 208, 224, 0.2); border-color: var(--cyan); }
+  #cogMenu .cog-btn:hover { background: rgba(var(--accent-rgb), 0.2); border-color: var(--cyan); }
   #cogMenu .cog-btn:disabled { opacity: 0.6; cursor: default; }
   #cogMenu .cog-status { padding: 1px 12px 3px; font-size: 10px; color: var(--cyan-dim); min-height: 12px; }
 
@@ -131,7 +164,7 @@
     background: rgba(10, 24, 34, 0.94); border: 1px solid var(--cyan); border-radius: 20px;
     font-family: var(--sans); font-size: 11.5px; color: var(--cyan-text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), 0 0 16px rgba(69, 208, 224, 0.18) inset;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5), 0 0 16px rgba(var(--accent-rgb), 0.18) inset;
     opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; }
   #ocrToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -141,7 +174,7 @@
     /* drag handle for the Electron overlay (move by header while hovering) */
     -webkit-app-region: drag; cursor: grab; }
   .head::after { content: ""; position: absolute; left: 17px; right: 17px; bottom: -1px; height: 2px;
-    background: repeating-linear-gradient(90deg, rgba(92, 198, 224, 0.32) 0 3px, transparent 3px 8px); opacity: 0.7; }
+    background: var(--strip); opacity: 0.7; }
   #missionPick, .progress { -webkit-app-region: no-drag; }
 
   .eyebrow { position: relative; display: flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 600;
@@ -168,40 +201,40 @@
      instead of pinned top-right under the cog/grip buttons. */
   .titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 9px; }
   .title { flex: 1; min-width: 0; font-size: 19px; font-weight: 600; line-height: 1.12; letter-spacing: 0.02em;
-    text-transform: uppercase; color: #eaf6fb; text-shadow: 0 0 14px rgba(69, 208, 224, 0.35); }
+    text-transform: uppercase; color: var(--title); text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.35); }
   .sub { margin-top: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--cyan-dim); }
 
   #missionPick { display: none; position: relative; margin-top: 11px; }
   #missionBtn { width: 100%; display: flex; align-items: center; gap: 8px; cursor: pointer;
     font-family: var(--sans); font-size: 12.5px; font-weight: 500; text-align: left;
-    background: rgba(69, 208, 224, 0.08); color: var(--cyan-text);
+    background: rgba(var(--accent-rgb), 0.08); color: var(--cyan-text);
     border: 1px solid var(--border); border-radius: 3px; padding: 7px 10px; }
-  #missionBtn:hover { background: rgba(69, 208, 224, 0.16); border-color: var(--cyan); }
+  #missionBtn:hover { background: rgba(var(--accent-rgb), 0.16); border-color: var(--cyan); }
   #missionBtnLabel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #missionBtn .caret { color: var(--cyan); font-size: 12px; }
   #missionMenu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30;
-    background: #0a1822; border: 1px solid var(--border); border-radius: 3px;
+    background: var(--menu-bg); border: 1px solid var(--border); border-radius: 3px;
     max-height: 240px; overflow-y: auto; box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); }
   #missionMenu.open { display: block; }
   #missionMenu .opt { padding: 8px 11px; font-size: 12.5px; cursor: pointer; color: var(--cyan-text);
     border-bottom: 1px solid var(--divider); }
   #missionMenu .opt:last-child { border-bottom: none; }
-  #missionMenu .opt:hover { background: rgba(69, 208, 224, 0.14); }
+  #missionMenu .opt:hover { background: rgba(var(--accent-rgb), 0.14); }
   #missionMenu .opt.active { color: var(--cyan-bright); font-weight: 600; }
 
   .progress { flex: none; text-align: right; align-self: center; }
   .progress .frac { font-family: var(--mono); font-weight: 500; font-size: 18px; color: var(--gold);
-    font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(255, 210, 122, 0.35); }
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(var(--value-rgb), 0.35); }
   .progress .lbl { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); }
   .completed { margin-top: 8px; display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--green); border: 1px solid rgba(46, 230, 160, 0.45);
     background: rgba(46, 230, 160, 0.1); padding: 2px 9px; border-radius: 3px; }
 
   /* Mission-complete summary card — shown briefly over the completed mission. */
-  .cc { margin-top: 10px; border: 1px solid rgba(255, 210, 122, 0.5); border-radius: 5px;
-    background: linear-gradient(180deg, rgba(255, 210, 122, 0.14), rgba(46, 230, 160, 0.06));
-    padding: 9px 11px 10px; box-shadow: 0 0 18px rgba(255, 210, 122, 0.14) inset;
+  .cc { margin-top: 10px; border: 1px solid rgba(var(--value-rgb), 0.5); border-radius: 5px;
+    background: linear-gradient(180deg, rgba(var(--value-rgb), 0.14), rgba(46, 230, 160, 0.06));
+    padding: 9px 11px 10px; box-shadow: 0 0 18px rgba(var(--value-rgb), 0.14) inset;
     animation: ccIn 0.35s ease both; }
   @keyframes ccIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   .cc-head { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
@@ -225,8 +258,8 @@
   .cc-bps.single { grid-template-columns: 1fr; }
   .cc-bp { display: flex; flex-direction: column; align-items: center; min-width: 0; }
   .cc-bp-thumb { position: relative; width: 100%; aspect-ratio: 1; border-radius: 4px;
-    background: radial-gradient(circle at 50% 38%, rgba(69, 208, 224, 0.14), rgba(8, 17, 26, 0.55));
-    border: 1px solid rgba(69, 208, 224, 0.28); overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, rgba(var(--accent-rgb), 0.14), rgba(8, 17, 26, 0.55));
+    border: 1px solid rgba(var(--accent-rgb), 0.28); overflow: hidden;
     display: flex; align-items: center; justify-content: center; }
   .cc-bp-thumb img { width: 100%; height: 100%; object-fit: contain; }
   .cc-bp-thumb.noimg::before { content: "◆"; color: var(--cyan-dim); font-size: 15px; }
@@ -238,13 +271,13 @@
   .pool { padding: 9px 11px 11px; position: relative; z-index: 2; }
   .row { display: flex; align-items: center; gap: 10px; padding: 7px 9px; margin-top: 3px; border-radius: 3px;
     background: rgba(255, 255, 255, 0.02); cursor: pointer; user-select: none; transition: background .15s; }
-  .row:hover { background: rgba(69, 208, 224, 0.07); }
-  .row.owned { background: linear-gradient(90deg, rgba(69, 208, 224, 0.12), rgba(69, 208, 224, 0.02)); }
+  .row:hover { background: rgba(var(--accent-rgb), 0.07); }
+  .row.owned { background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.12), rgba(var(--accent-rgb), 0.02)); }
   .mark { flex: none; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 2px;
     border: 1px solid var(--border); color: var(--cyan-bright); font-size: 12px; font-weight: 700; background: var(--track); }
-  .row.owned .mark { border-color: var(--cyan); background: rgba(69, 208, 224, 0.22); }
+  .row.owned .mark { border-color: var(--cyan); background: rgba(var(--accent-rgb), 0.22); }
   .name { flex: 1; font-size: 13.5px; font-weight: 500; color: var(--cyan-dim); }
-  .row.owned .name { color: #eaf6fb; }
+  .row.owned .name { color: var(--title); }
   .name .ovr { font-size: 9px; color: var(--gold); margin-left: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
   .name .ovr.def { color: var(--cyan-dim); }
   .chance { flex: none; font-family: var(--mono); font-weight: 500; font-size: 11px; color: var(--cyan-dim); font-variant-numeric: tabular-nums; }
@@ -253,17 +286,17 @@
      filter). 10 top-level tabs; tabs absent from the current pool are greyed. */
   .catbar { display: flex; gap: 4px; padding: 9px 11px 3px; flex-wrap: wrap; position: relative; z-index: 2; }
   .cat { position: relative; width: 30px; height: 30px; border-radius: 4px; cursor: pointer;
-    border: 1px solid var(--divider); background: rgba(69, 208, 224, 0.05); display: grid; place-items: center;
+    border: 1px solid var(--divider); background: rgba(var(--accent-rgb), 0.05); display: grid; place-items: center;
     transition: background .12s, border-color .12s; }
   .cat .ci { width: 18px; height: 18px; background: var(--cyan-dim);
     -webkit-mask: var(--u) center / contain no-repeat; mask: var(--u) center / contain no-repeat; transition: background .12s; }
-  .cat:hover { border-color: var(--cyan); background: rgba(69, 208, 224, 0.14); }
+  .cat:hover { border-color: var(--cyan); background: rgba(var(--accent-rgb), 0.14); }
   .cat:hover .ci { background: var(--cyan-bright); }
-  .cat.active { border-color: var(--cyan); background: rgba(69, 208, 224, 0.24);
-    box-shadow: 0 0 10px rgba(69, 208, 224, 0.28) inset; }
+  .cat.active { border-color: var(--cyan); background: rgba(var(--accent-rgb), 0.24);
+    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.28) inset; }
   .cat.active .ci { background: var(--cyan-bright); }
   .cat.off { cursor: default; opacity: 0.3; }
-  .cat.off:hover { border-color: var(--divider); background: rgba(69, 208, 224, 0.05); }
+  .cat.off:hover { border-color: var(--divider); background: rgba(var(--accent-rgb), 0.05); }
   .cat.off .ci { background: var(--faint); }
   .cat .cnt { position: absolute; top: -5px; right: -5px; min-width: 14px; height: 14px; padding: 0 3px;
     border-radius: 7px; background: var(--cyan); color: #04141b; font-family: var(--mono); font-size: 8.5px;
@@ -273,13 +306,13 @@
   /* Dynamic-event reward ladder (Return of XenoThreat) shown on a pool-less event
      mission: an event header, a "check your journal" note, and per-tier reward rows. */
   .evhead { display: flex; align-items: center; gap: 8px; margin: 2px 3px 7px; font-size: 12px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); text-shadow: 0 0 12px rgba(255, 210, 122, 0.3); }
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); text-shadow: 0 0 12px rgba(var(--value-rgb), 0.3); }
   .evhead .dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
   .evnote { margin: 0 3px 8px; padding: 7px 9px; font-size: 10.5px; line-height: 1.4; color: var(--cyan-text);
-    background: rgba(69, 208, 224, 0.06); border: 1px solid var(--divider); border-radius: 4px; }
+    background: rgba(var(--accent-rgb), 0.06); border: 1px solid var(--divider); border-radius: 4px; }
   .evtier { display: flex; align-items: center; gap: 9px; margin: 11px 3px 4px; cursor: pointer;
     user-select: none; padding: 2px 3px; border-radius: 3px; transition: background .12s; }
-  .evtier:hover { background: rgba(69, 208, 224, 0.07); }
+  .evtier:hover { background: rgba(var(--accent-rgb), 0.07); }
   .evtier .evcar { color: var(--cyan); font-size: 9px; }
   .evtier .evpct { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--gold);
     font-variant-numeric: tabular-nums; }
@@ -296,7 +329,7 @@
   .fc-label { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--cyan-dim); }
   .fc-num { font-family: var(--mono); font-size: 23px; font-weight: 700; color: var(--gold);
-    margin-top: 4px; text-shadow: 0 0 12px rgba(255, 210, 122, 0.3); }
+    margin-top: 4px; text-shadow: 0 0 12px rgba(var(--value-rgb), 0.3); }
   .foot-col-ver { display: flex; flex-direction: column; align-items: flex-end; text-align: right;
     line-height: 1.4; }
   .fv-app { font-family: var(--sans); font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
@@ -310,17 +343,17 @@
      divider + row/tick-box treatment as the pool, but their tick is manual-only. */
   .rew { margin: 0 0 4px; }
   .rewpay { display: flex; align-items: baseline; gap: 10px; padding: 7px 9px; margin-top: 3px;
-    border: 1px solid rgba(255, 210, 122, 0.35); border-radius: 3px; background: rgba(255, 210, 122, 0.07); }
+    border: 1px solid rgba(var(--value-rgb), 0.35); border-radius: 3px; background: rgba(var(--value-rgb), 0.07); }
   .rewpay .rp-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
   .rewpay .rp-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--gold);
-    font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(255, 210, 122, 0.3); }
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(var(--value-rgb), 0.3); }
   .poolhead { display: flex; align-items: baseline; gap: 8px; margin: 11px 3px 3px; padding-top: 9px;
     border-top: 1px solid var(--divider); font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--cyan); }
   .poolhead .ph-sub { font-size: 8.5px; font-weight: 500; letter-spacing: 0.06em; text-transform: none;
     color: var(--cyan-dim); }
   .ambig { margin: 8px 3px 2px; padding: 6px 9px; border-radius: 3px; font-size: 10px; line-height: 1.35;
-    color: var(--gold); border: 1px solid rgba(255, 210, 122, 0.35); background: rgba(255, 210, 122, 0.08); }
+    color: var(--gold); border: 1px solid rgba(var(--value-rgb), 0.35); background: rgba(var(--value-rgb), 0.08); }
   .rewnote { margin-top: 7px; padding: 0 3px; font-size: 10.5px; color: var(--faint); }
 
   /* Idle recent-activity: last completed missions + received blueprints (with times). */
@@ -340,16 +373,16 @@
   /* "What's new" card — shown once per new version at the top of the HUD. Hover-
      interactive (like the panel) + flagged as a modal so it's closeable even under lock. */
   #whatsnew { display: none; margin: 0 0 11px; border: 1px solid var(--cyan); border-radius: 8px;
-    background: linear-gradient(180deg, rgba(69, 208, 224, 0.13), rgba(8, 17, 26, 0.55));
-    box-shadow: 0 0 22px rgba(69, 208, 224, 0.14) inset; padding: 11px 12px 12px; position: relative; z-index: 6; }
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.13), rgba(8, 17, 26, 0.55));
+    box-shadow: 0 0 22px rgba(var(--accent-rgb), 0.14) inset; padding: 11px 12px 12px; position: relative; z-index: 6; }
   #whatsnew.show { display: block; }
   #whatsnew .wn-head { display: flex; align-items: center; gap: 8px; }
   #whatsnew .wn-title { flex: 1; font-family: var(--sans); font-size: 11px; font-weight: 700;
     letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); }
   #whatsnew .wn-ver { font-family: var(--mono); font-size: 11px; color: var(--gold); }
   #whatsnew .wn-x { flex: none; width: 21px; height: 21px; display: grid; place-items: center; cursor: pointer;
-    border: 1px solid var(--divider); border-radius: 4px; color: var(--cyan-dim); font-size: 12px; background: rgba(69, 208, 224, 0.06); }
-  #whatsnew .wn-x:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(69, 208, 224, 0.16); }
+    border: 1px solid var(--divider); border-radius: 4px; color: var(--cyan-dim); font-size: 12px; background: rgba(var(--accent-rgb), 0.06); }
+  #whatsnew .wn-x:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(var(--accent-rgb), 0.16); }
   #whatsnew ul { list-style: none; margin: 9px 0 0; padding: 0; }
   #whatsnew li { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; line-height: 1.4; color: var(--cyan-text); }
   #whatsnew li::before { content: "◆"; color: var(--cyan); font-size: 7px; flex: none; transform: translateY(4px); }
@@ -366,11 +399,11 @@
   .mi { margin: 0 0 7px; }
   .mi-head { display: flex; align-items: center; gap: 8px; padding: 6px 9px; cursor: pointer;
     font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan-dim);
-    border: 1px solid var(--divider); border-radius: 3px; background: rgba(69, 208, 224, 0.04);
+    border: 1px solid var(--divider); border-radius: 3px; background: rgba(var(--accent-rgb), 0.04);
     user-select: none; transition: background .12s, border-color .12s; }
-  .mi-head:hover { background: rgba(69, 208, 224, 0.1); border-color: var(--cyan); color: var(--cyan-text); }
+  .mi-head:hover { background: rgba(var(--accent-rgb), 0.1); border-color: var(--cyan); color: var(--cyan-text); }
   .mi-head.static { cursor: default; }
-  .mi-head.static:hover { background: rgba(69, 208, 224, 0.04); border-color: var(--divider); color: var(--cyan-dim); }
+  .mi-head.static:hover { background: rgba(var(--accent-rgb), 0.04); border-color: var(--divider); color: var(--cyan-dim); }
   .mi-head .car { color: var(--cyan); font-size: 9px; }
   .mi-body { padding: 8px 9px 4px; }
   .mi-row { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; }
@@ -392,12 +425,12 @@
      A lower-bound estimate (max of the inferred-rank floor + witnessed post-4.8 gains). */
   .rb { padding: 4px 0 2px; }
   .rb-track { position: relative; height: 7px; margin: 6px 0 4px; border-radius: 4px;
-    background: rgba(90, 180, 210, 0.14); box-shadow: inset 0 0 0 1px rgba(120, 210, 235, 0.18); overflow: hidden; }
+    background: rgba(var(--accent-rgb), 0.14); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18); overflow: hidden; }
   .rb-fill { height: 100%; border-radius: 4px; transition: width 0.35s ease;
-    background: linear-gradient(90deg, var(--cyan-text), var(--gold)); box-shadow: 0 0 6px rgba(255, 210, 122, 0.35); }
+    background: linear-gradient(90deg, var(--cyan-text), var(--gold)); box-shadow: 0 0 6px rgba(var(--value-rgb), 0.35); }
   /* Floor-anchored state: we know the rank but haven't summed gains within it. */
   .rb.floor .rb-fill { background: repeating-linear-gradient(90deg,
-    rgba(120, 210, 235, 0.55) 0 4px, rgba(120, 210, 235, 0.15) 4px 8px); box-shadow: none; }
+    rgba(var(--accent-rgb), 0.55) 0 4px, rgba(var(--accent-rgb), 0.15) 4px 8px); box-shadow: none; }
   .rb-cap { font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
     color: var(--cyan-text); opacity: 0.85; font-variant-numeric: tabular-nums; }
   .rb-cap .nx { color: var(--gold); }
@@ -406,9 +439,9 @@
      list leads with what you can still GET. Click to expand/collapse. */
   .grphead { display: flex; align-items: center; gap: 8px; margin-top: 9px; padding: 6px 9px; cursor: pointer;
     font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan-dim);
-    border: 1px solid var(--divider); border-radius: 3px; background: rgba(69, 208, 224, 0.04);
+    border: 1px solid var(--divider); border-radius: 3px; background: rgba(var(--accent-rgb), 0.04);
     user-select: none; transition: background .12s, border-color .12s; }
-  .grphead:hover { background: rgba(69, 208, 224, 0.1); border-color: var(--cyan); color: var(--cyan-text); }
+  .grphead:hover { background: rgba(var(--accent-rgb), 0.1); border-color: var(--cyan); color: var(--cyan-text); }
   .grphead .car { color: var(--cyan); font-size: 9px; }
   .grphead .gcnt { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--gold);
     font-variant-numeric: tabular-nums; }
@@ -418,12 +451,14 @@
   .row .confirm { display: flex; align-items: center; gap: 6px; margin-left: auto; }
   .confirm .cf-q { font-size: 10.5px; color: var(--amber); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em; }
   .confirm button { font-family: var(--sans); font-size: 10.5px; font-weight: 600; cursor: pointer;
-    padding: 3px 10px; border-radius: 3px; border: 1px solid var(--border); background: rgba(69, 208, 224, 0.08); color: var(--cyan-text); }
+    padding: 3px 10px; border-radius: 3px; border: 1px solid var(--border); background: rgba(var(--accent-rgb), 0.08); color: var(--cyan-text); }
   .confirm .cf-yes { border-color: var(--red); color: var(--red); background: rgba(255, 132, 120, 0.12); }
 </style>
 </head>
 <body>
   <div id="panel" class="empty">
+    <img class="tape tl" alt="" src="tape-tl.webp">
+    <img class="tape br" alt="" src="tape-br.webp">
     <div id="moveBanner"><div class="movebox">⠿ Drag anywhere to move<button id="moveDone">Done</button></div></div>
     <div id="whatsnew">
       <div class="wn-head">
@@ -520,11 +555,28 @@
 
   // User prefs sent with the mission view (config-driven). Updated in render().
   // Defaults mirror the server so odds/verify start hidden (cleaner) with no first-paint flash.
-  let PREFS = { timeRelative: true, hideCatbar: false, missionOcr: false };
+  let PREFS = { timeRelative: true, hideCatbar: false, missionOcr: false, theme: "mobiglas", overlayTwist: 4, overlayScale: 100 };
   // Apply the category-bar visibility pref via a panel class (composes with the empty-state rule).
   function applyPrefs() {
     $("panel").classList.toggle("hide-catbar", !!PREFS.hideCatbar);
+    // Manufacturer theme (mobiglas default, drake, or the auto-resolved theme from the
+    // server) + left↔right HUD-align angle. A ?theme= query param overrides for testing.
+    const root = document.documentElement;
+    const qTheme = new URLSearchParams(location.search).get("theme");
+    root.setAttribute("data-theme", qTheme || PREFS.theme || "mobiglas");
+    root.style.setProperty("--twist", (Number(PREFS.overlayTwist) || 0) + "deg");
+    // Global UI scale: zoom the content, and resize the window ONLY when the scale actually
+    // changes — never on a theme switch, which also fires prefs (that was resetting the
+    // window's size + position on every Mobiglas↔Drake flip). First prefs adopts the saved
+    // window size (no resize); later scale changes resize the window to match.
+    const scale = Math.max(50, Math.min(200, Number(PREFS.overlayScale) || 100));
+    document.body.style.zoom = scale / 100;
+    if (lastScale !== null && scale !== lastScale && window.overlayApi && window.overlayApi.setScale) {
+      window.overlayApi.setScale(scale);
+    }
+    lastScale = scale;
   }
+  let lastScale = null;
 
   // Time label parts from an ISO stamp: absolute date+clock (the "date and timestamp")
   // plus a relative "2h ago" hint. The time-format setting picks which one to show.

@@ -151,13 +151,15 @@ function waitForServer(tries = 60) {
   });
 }
 
-// ── overlay window ──────────────────────────────────────────────────────────
-function boundsFile() {
-  return path.join(app.getPath("userData"), "overlay-bounds.json");
+// ── window bounds persistence (per window) ──────────────────────────────────
+// Position + size live in userData/<name>-bounds.json, which sits in %APPDATA% and so
+// survives app updates. Each window (overlay, mining) has its own file.
+function boundsFile(name) {
+  return path.join(app.getPath("userData"), (name || "overlay") + "-bounds.json");
 }
-function loadBounds() {
+function loadBounds(name) {
   try {
-    const b = JSON.parse(fs.readFileSync(boundsFile(), "utf8"));
+    const b = JSON.parse(fs.readFileSync(boundsFile(name), "utf8"));
     // Only restore if it lands on a connected display (avoids off-screen windows).
     const onScreen = screen.getAllDisplays().some((d) => {
       const a = d.workArea;
@@ -169,24 +171,30 @@ function loadBounds() {
   }
   return null;
 }
-let saveTimer = null;
-function saveBounds() {
-  if (!overlay) return;
-  clearTimeout(saveTimer);
-  const b = overlay.getBounds();
-  saveTimer = setTimeout(() => {
+const saveTimers = {};
+function saveWinBounds(win, name) {
+  if (!win || win.isDestroyed()) return;
+  clearTimeout(saveTimers[name]);
+  const b = win.getBounds();
+  saveTimers[name] = setTimeout(() => {
     try {
-      fs.writeFileSync(boundsFile(), JSON.stringify(b));
+      fs.writeFileSync(boundsFile(name), JSON.stringify(b));
     } catch {
       /* non-fatal */
     }
   }, 400);
 }
+function saveBounds() { saveWinBounds(overlay, "overlay"); }
+function saveMiningBounds() { saveWinBounds(miningWin, "mining"); }
 
+// Design size of the overlay window at 100% scale; the global-scale feature sizes the
+// window to OVERLAY_W/H × scale so the zoomed panel is never clipped.
+const OVERLAY_W = 400;
+const OVERLAY_H = 760;
 function createOverlay() {
   const { workArea } = screen.getPrimaryDisplay();
-  const w = 400;
-  const h = 760;
+  const w = OVERLAY_W;
+  const h = OVERLAY_H;
   const saved = loadBounds();
   overlay = new BrowserWindow({
     width: saved?.width ?? w,
@@ -268,12 +276,15 @@ async function postConfig(patch) {
 // the HUD's shell model: click-through until the pointer is over it (so it can't be clicked
 // by accident in-game), a hover-suspended move mode, and a ⚙ cog for its settings. Hiding
 // (tray / hotkey) hides rather than destroys it so countdowns + state persist.
+const MINING_W = 392;
+const MINING_H = 620;
 let miningWin = null;
 function createMining() {
   const { workArea } = screen.getPrimaryDisplay();
+  const saved = loadBounds("mining");
   miningWin = new BrowserWindow({
-    width: 392, height: 620,
-    x: workArea.x + workArea.width - 416, y: workArea.y + 60,
+    width: saved?.width ?? MINING_W, height: saved?.height ?? MINING_H,
+    x: saved?.x ?? workArea.x + workArea.width - 416, y: saved?.y ?? workArea.y + 60,
     frame: false, transparent: true, resizable: true, skipTaskbar: true,
     alwaysOnTop: true, hasShadow: false, fullscreenable: false, focusable: true, show: false,
     webPreferences: { contextIsolation: true, preload: path.join(__dirname, "mining-preload.cjs"), autoplayPolicy: "no-user-gesture-required" },
@@ -282,6 +293,8 @@ function createMining() {
   miningWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   miningWin.loadURL(`http://localhost:${PORT}/mining.html?v=${Date.now()}${AMD_COMPAT ? "&lite=1" : ""}`);
   applyMiningMouse();
+  miningWin.on("moved", saveMiningBounds);
+  miningWin.on("resize", saveMiningBounds);
   miningWin.on("close", (e) => { e.preventDefault(); hideMining(); });
 }
 // Click-through unless the pointer is over the window, its cog menu is open, or it's in
@@ -796,6 +809,19 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.on("overlay:end-move", () => {
     if (moveMode) setMoveMode(false);
   });
+  // Global UI scale: the page zooms its content; resize the window to base × scale so a
+  // scaled-up panel isn't clipped. Position is preserved.
+  ipcMain.on("overlay:set-scale", (_e, pct) => {
+    if (!overlay) return;
+    const s = Math.max(50, Math.min(200, Number(pct) || 100)) / 100;
+    const width = Math.round(OVERLAY_W * s), height = Math.round(OVERLAY_H * s);
+    const b = overlay.getBounds();
+    const { workArea } = screen.getPrimaryDisplay();
+    // Keep it on-screen: if growing would run past the work-area edges, shift it back in.
+    const x = Math.max(workArea.x, Math.min(b.x, workArea.x + workArea.width - width));
+    const y = Math.max(workArea.y, Math.min(b.y, workArea.y + workArea.height - height));
+    overlay.setBounds({ x, y, width, height });
+  });
 
   // Mining Assistant window: same hover-to-click + move-mode + cog-modal bridge as the HUD.
   ipcMain.on("mining:hover", (_e, on) => {
@@ -811,6 +837,17 @@ if (!app.requestSingleInstanceLock()) {
   });
   ipcMain.on("mining:end-move", () => {
     if (miningMoveMode) setMiningMoveMode(false);
+  });
+  // Global UI scale for the Mining Assistant window (same behavior as the HUD's).
+  ipcMain.on("mining:set-scale", (_e, pct) => {
+    if (!miningWin || miningWin.isDestroyed()) return;
+    const s = Math.max(50, Math.min(200, Number(pct) || 100)) / 100;
+    const width = Math.round(MINING_W * s), height = Math.round(MINING_H * s);
+    const b = miningWin.getBounds();
+    const { workArea } = screen.getPrimaryDisplay();
+    const x = Math.max(workArea.x, Math.min(b.x, workArea.x + workArea.width - width));
+    const y = Math.max(workArea.y, Math.min(b.y, workArea.y + workArea.height - height));
+    miningWin.setBounds({ x, y, width, height });
   });
 
   // Tray app — keep running when the overlay window is closed.

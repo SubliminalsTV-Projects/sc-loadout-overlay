@@ -420,9 +420,19 @@
   $("volSlider").addEventListener("input", () => { localStorage.setItem("miningVol", ($("volSlider").value / 100).toString()); if (master) master.gain.value = getVol(); });
   renderVoice();
   let cfg = {};
+  // Global UI scale — mirrors the main HUD. Zoom the content; resize the window only when the
+  // scale value actually changes (never on a mere re-read), so it's stable + persists position.
+  let lastMiningScale = null;
+  function applyMiningScale(pct) {
+    const scale = Math.max(50, Math.min(200, Number(pct) || 100));
+    document.body.style.zoom = scale / 100;
+    if (lastMiningScale !== null && scale !== lastMiningScale && window.miningApi && window.miningApi.setScale) window.miningApi.setScale(scale);
+    lastMiningScale = scale;
+  }
   async function loadCfg() {
     try { cfg = await fetch("api/config").then((r) => r.json()); } catch {}
     $("toneClr").classList.toggle("hidden", !cfg.miningTone);
+    applyMiningScale(cfg.overlayScale);
   }
   $("toneBtn").addEventListener("click", async () => {
     if (!window.miningApi || !window.miningApi.pickTone) return;
@@ -485,12 +495,15 @@
     lastJobCount = jc;
   }
   // A newly-scanned rock: flash + chime + speak on a target (always), or on any rock in
-  // "every" announce mode. Debris (no table match) is visual-only.
+  // "every" announce mode. Debris (no table match) flashes + says "Debris" so it's clear the
+  // scan registered — without the target chime, so debris and a target hit stay distinct.
   function onNewScan(sc) {
     maybeAutoShow();                 // any new scan means the player is mining/scanning
-    if (!sc.matches.length) return;
+    const el = $("scanNow");
+    const flash = () => { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); };
+    if (!sc.matches.length) { flash(); speak("Debris"); return; }
     const isTarget = sc.matches.some((m) => targetSet.has(m.name));
-    if (isTarget) { const el = $("scanNow"); el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); chime(); }
+    if (isTarget) { flash(); chime(); }
     const mode = localStorage.getItem("miningSpeakMode") || "target";
     if (mode === "every" || isTarget) {
       speakClips(["c_thatlookslike", nameSlug(sc.matches[0].name)], "That looks like " + sc.matches[0].name);
@@ -526,6 +539,7 @@
     es.onmessage = (ev) => {
       let msg; try { msg = JSON.parse(ev.data); } catch { return; }
       if (msg.kind === "state") applyState(msg.view);
+      else if (msg.kind === "scale") applyMiningScale(msg.scale);
       else if (msg.kind === "refinery-done") { alarm(); speakRefineryDone(msg.job.material, msg.job.station); }
       // scanner alerts (target-hit) are handled client-side in onNewScan so they respect
       // the announce-mode toggle; the server still emits target-hit but we drive off state.

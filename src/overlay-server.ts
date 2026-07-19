@@ -122,6 +122,15 @@ interface Config {
    *  fabricator category filter bar. Sent to the overlay via the mission view prefs.
    *  (Odds mode + Verify now live inside the cog itself, so the footer has no buttons.) */
   hideCatbar: boolean;
+  /** Overlay manufacturer theme: "mobiglas" (default), "drake", or "auto" (match the ship
+   *  you're flying, detected from the log). Sent to the overlay via the mission view prefs. */
+  theme: "mobiglas" | "drake" | "auto";
+  /** Y-axis (left↔right yaw) rotation of the overlay panel, in degrees, to line it up with a
+   *  perspective-angled in-game HUD. 0 = flat, 4 = the default subtle tilt. Sent via prefs. */
+  overlayTwist: number;
+  /** Global overlay UI scale, in percent (100 = design size). Lets 4K users size it up and
+   *  small screens size it down. Applied as CSS zoom; the window resizes to match. */
+  overlayScale: number;
 }
 
 const DEFAULTS: Config = {
@@ -147,6 +156,9 @@ const DEFAULTS: Config = {
   seenChangelog: "",
   showLoadout: false,
   hideCatbar: false,
+  theme: "mobiglas",
+  overlayTwist: 4,
+  overlayScale: 100,
 };
 
 function loadConfig(): Config {
@@ -293,6 +305,35 @@ const tracker = new MissionTracker({ dataDir, remoteBaseUrl: "https://subliminal
 // Name->UUID catalog for the screen-read OCR endpoint; loaded lazily on first use.
 let screenCatalog: CatalogEntry[] | null = null;
 const missionClients = new Set<ServerResponse>();
+// ── Overlay theme (manufacturer) ─────────────────────────────────────────────
+// The ship manufacturer we last detected in the log (for theme: "auto"). Only Drake has a
+// bespoke theme so far; every other manufacturer (and "unknown") falls back to Mobiglas.
+let shipManufacturer: string | null = null;
+const MFR_THEME: Record<string, "drake"> = { drake: "drake" };
+// Manufacturer codes (the vehicle-entity prefix) → a manufacturer key; display-name leads use
+// the same keys. Extend both this and MFR_THEME as more manufacturer themes are added.
+const MFR_BY_CODE: Record<string, string> = {
+  DRAK: "drake", ORIG: "origin", AEGS: "aegis", ANVL: "anvil", RSI: "rsi", MISC: "misc",
+  CRUS: "crusader", ARGO: "argo", BANU: "banu", AOPO: "aopoa", CNOU: "consolidated outland",
+  GAMA: "gatac", GRIN: "greycat", ESPR: "esperia", TMBL: "tumbril", KRIG: "kruger",
+  MRAI: "mirai", XIAN: "xian", VNCL: "vanduul",
+};
+/** The manufacturer of the local player's ship from a log line, or null.
+ *  AC: the OnVehicleSpawned entity name carries a MANU_ prefix. PU: the comms channel is
+ *  named "<Ship Display Name> : <Player>", so the display name leads with the manufacturer. */
+function manufacturerFromLine(line: string): string | null {
+  const spawn = line.match(/OnVehicleSpawned\s+\d+\s+\(([A-Za-z0-9_]+?)_\d+\)\s+by player 0/);
+  if (spawn) { const code = spawn[1].split("_")[0].toUpperCase(); if (MFR_BY_CODE[code]) return MFR_BY_CODE[code]; }
+  const join = line.match(/joined channel '([^:']+?)\s*:\s*[^']+'/);
+  if (join) { const lead = join[1].trim().toLowerCase(); for (const name of Object.values(MFR_BY_CODE)) if (lead.startsWith(name)) return name; }
+  return null;
+}
+/** The theme to actually apply: the fixed choice, or the ship's theme when set to "auto". */
+function effectiveTheme(): "mobiglas" | "drake" {
+  if (config.theme === "auto") return (shipManufacturer && MFR_THEME[shipManufacturer]) || "mobiglas";
+  return config.theme;
+}
+
 // The overlay view plus user prefs the overlay needs (kept out of the tracker, which
 // doesn't know about config). Sent on every mission broadcast so a config change (e.g.
 // the time-format toggle) reaches the overlay live via broadcastMissions().
@@ -306,6 +347,9 @@ function missionsPayload(): string {
       hideCatbar: config.hideCatbar,
       missionOcr: config.missionOcr,
       fabCapture: config.fabCapture,
+      theme: effectiveTheme(),
+      overlayTwist: config.overlayTwist,
+      overlayScale: config.overlayScale,
     },
   });
 }
@@ -401,6 +445,14 @@ function startWatcher(): void {
     const me = parseMissionEvent(e);
     if (me) tracker.apply(me);
 
+    // Theme auto-switch: track the manufacturer of the ship we're in; re-broadcast so the
+    // overlay retints live when theme="auto". Independent of the erkul loadout autoSwitch.
+    const mfr = manufacturerFromLine(e.message);
+    if (mfr && mfr !== shipManufacturer) {
+      shipManufacturer = mfr;
+      if (config.theme === "auto") broadcastMissions();
+    }
+
     if (!config.autoSwitch) return;
     // Only the LOCAL player's ship is logged as "... by player 0".
     const m = e.message.match(/OnVehicleSpawned\s+\d+\s+\(([A-Za-z0-9_]+?)_\d+\)\s+by player 0/);
@@ -422,6 +474,8 @@ const MIME: Record<string, string> = {
   // (SVG in image contexts is MIME-strict; raster is content-sniffed regardless).
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".webp": "image/webp",
+  ".jpg": "image/jpeg",
 };
 
 function readBody(req: import("node:http").IncomingMessage): Promise<any> {
@@ -715,9 +769,16 @@ const server = createServer(async (req, res) => {
     if (typeof body.shareLogs === "boolean") config.shareLogs = body.shareLogs;
     if (typeof body.showLoadout === "boolean") config.showLoadout = body.showLoadout;
     if (typeof body.hideCatbar === "boolean") config.hideCatbar = body.hideCatbar;
+    if (body.theme === "mobiglas" || body.theme === "drake" || body.theme === "auto") config.theme = body.theme;
+    if (typeof body.overlayTwist === "number" && isFinite(body.overlayTwist))
+      config.overlayTwist = Math.max(-35, Math.min(35, Math.round(body.overlayTwist)));
+    if (typeof body.overlayScale === "number" && isFinite(body.overlayScale))
+      config.overlayScale = Math.max(50, Math.min(200, Math.round(body.overlayScale)));
     await saveConfig();
     // Push the new prefs to every open overlay (incl. OBS browser-source) live.
     broadcastMissions();
+    // The Mining Assistant window scales with the same global setting.
+    miningSend({ kind: "scale", scale: config.overlayScale });
     await reindex();
     startWatcher();
     // Re-arm sync with the new settings and reconcile the full collection.

@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld("miningApi", {
   pickTone: () => ipcRenderer.invoke("mining:pick-tone"), // -> true if a WAV was chosen
   clearTone: () => ipcRenderer.invoke("mining:clear-tone"),
   openSettings: () => ipcRenderer.send("overlay:open-settings"),
+  // Global UI scale: the page zooms its content; the window resizes to match.
+  setScale: (pct) => ipcRenderer.send("mining:set-scale", Number(pct) || 100),
 });
