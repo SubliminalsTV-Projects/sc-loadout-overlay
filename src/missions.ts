@@ -1466,9 +1466,14 @@ export class MissionTracker extends EventEmitter {
     return [...map].map(([uuid, v]) => ({ uuid, unlockedAt: v.unlockedAt, source: v.source }));
   }
 
-  /** The tracked mission's dataset key (debug_name), or null. */
+  /** The tracked mission's dataset key (debug_name), or null once it's ended
+   *  (completed/abandoned). Gating on endedMissionIds is what stops the site's
+   *  "currently tracking" from sticking on a mission you just dropped — the
+   *  overlay already hides it via effectiveMissionId, but the sync read this
+   *  pointer raw. */
   currentContractKey(): string | null {
-    const t = this.trackedMissionId ? this.missions.get(this.trackedMissionId) : undefined;
+    if (!this.trackedMissionId || this.endedMissionIds.has(this.trackedMissionId)) return null;
+    const t = this.missions.get(this.trackedMissionId);
     return t?.contractKey ?? null;
   }
 
