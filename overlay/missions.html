@@ -1035,8 +1035,8 @@
   // Defaults mirror the server so odds/verify start hidden (cleaner) with no first-paint flash.
   let PREFS = { timeRelative: true, hideCatbar: false, missionOcr: false, theme: "mobiglas", overlayTwist: 0, overlayScale: 100 };
   // Apply the category-bar visibility pref via a panel class (composes with the empty-state rule).
-  // Themes that ship a manufacturer logo for the folder-tab (Mobiglas + Grey's have none).
-  const BRAND_LOGOS = new Set(["drake","anvil","esperia","misc","banu","gatac","mirai","origin","aegis","crusader","rsi","kruger","argo","cnou"]);
+  // Themes that ship a manufacturer logo for the folder-tab (only Mobiglas has none).
+  const BRAND_LOGOS = new Set(["drake","anvil","greys","esperia","misc","banu","gatac","mirai","origin","aegis","crusader","rsi","kruger","argo","cnou"]);
   function updateBrandTab() {
     const root = document.documentElement, tab = document.querySelector(".brandtab");
     if (!tab) return;
