@@ -136,7 +136,7 @@ interface Config {
   hideCatbar: boolean;
   /** Overlay manufacturer theme: "mobiglas" (default), "drake", or "auto" (match the ship
    *  you're flying, detected from the log). Sent to the overlay via the mission view prefs. */
-  theme: "mobiglas" | "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo" | "auto";
+  theme: "mobiglas" | "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo" | "cnou" | "auto";
   /** Local subscriber-entitlement override for manufacturer skins. Default false = locked
    *  (preview-only). Superseded by the server-resolved Twitch-sub check when that lands. */
   premiumOverride?: boolean;
@@ -328,7 +328,7 @@ const missionClients = new Set<ServerResponse>();
 // The ship manufacturer we last detected in the log (for theme: "auto"). Drake and Anvil have
 // bespoke themes so far; every other manufacturer (and "unknown") falls back to Mobiglas.
 let shipManufacturer: string | null = null;
-const MFR_THEME: Record<string, "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo"> = { drake: "drake", anvil: "anvil", greys: "greys", esperia: "esperia", misc: "misc", banu: "banu", gatac: "gatac", mirai: "mirai", origin: "origin", aegis: "aegis", crusader: "crusader", rsi: "rsi", kruger: "kruger", argo: "argo" };
+const MFR_THEME: Record<string, "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo" | "cnou"> = { drake: "drake", anvil: "anvil", greys: "greys", esperia: "esperia", misc: "misc", banu: "banu", gatac: "gatac", mirai: "mirai", origin: "origin", aegis: "aegis", crusader: "crusader", rsi: "rsi", kruger: "kruger", argo: "argo", "consolidated outland": "cnou" };
 // Manufacturer codes (the vehicle-entity prefix) → a manufacturer key; display-name leads use
 // the same keys. Extend both this and MFR_THEME as more manufacturer themes are added.
 const MFR_BY_CODE: Record<string, string> = {
@@ -337,6 +337,9 @@ const MFR_BY_CODE: Record<string, string> = {
   GAMA: "gatac", GRIN: "greycat", ESPR: "esperia", TMBL: "tumbril", KRIG: "kruger",
   MRAI: "mirai", XIAN: "xian", VNCL: "vanduul", GLSN: "greys",
 };
+// Channel-name lead prefixes that abbreviate the manufacturer (so the full manufacturer key
+// from MFR_BY_CODE isn't a startsWith match). Dots survive the apostrophe-strip in the match.
+const MFR_LEAD_ALIAS: Record<string, string> = { "c.o.": "consolidated outland" };
 /** The manufacturer of the local player's ship from a log line, or null.
  *  AC: the OnVehicleSpawned entity name carries a MANU_ prefix. PU: the comms channel is
  *  named "<Ship Display Name> : <Player>", so the display name leads with the manufacturer. */
@@ -346,10 +349,16 @@ function manufacturerFromLine(line: string): string | null {
   // Ship name may contain an apostrophe ("Grey's Shiv"), so DON'T exclude ' from the capture,
   // and strip apostrophes before matching so "grey's" → "greys" lines up with the MFR key.
   const join = line.match(/joined channel '([^:]+?)\s*:\s*[^']+'/);
-  if (join) { const lead = join[1].trim().toLowerCase().replace(/['’`]/g, ""); for (const name of Object.values(MFR_BY_CODE)) if (lead.startsWith(name)) return name; }
+  if (join) {
+    const lead = join[1].trim().toLowerCase().replace(/['’`]/g, "");
+    for (const name of Object.values(MFR_BY_CODE)) if (lead.startsWith(name)) return name;
+    // Some ships abbreviate the manufacturer in the channel name, so the full manufacturer
+    // key isn't a prefix (Consolidated Outland → "C.O. Nomad"). Map those lead-prefixes.
+    for (const [alias, name] of Object.entries(MFR_LEAD_ALIAS)) if (lead.startsWith(alias)) return name;
+  }
   return null;
 }
-type ManufacturerTheme = "mobiglas" | "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo";
+type ManufacturerTheme = "mobiglas" | "drake" | "anvil" | "greys" | "esperia" | "misc" | "banu" | "gatac" | "mirai" | "origin" | "aegis" | "crusader" | "rsi" | "kruger" | "argo" | "cnou";
 // Manufacturer skins are a subscriber perk. Entitlement is server-resolved; until the
 // Twitch-sub pipeline lands it's a local override (default false = locked for everyone).
 function entitled(): boolean { return config.premiumOverride === true; }
@@ -877,7 +886,7 @@ const server = createServer(async (req, res) => {
     if (typeof body.shareLogs === "boolean") config.shareLogs = body.shareLogs;
     if (typeof body.showLoadout === "boolean") config.showLoadout = body.showLoadout;
     if (typeof body.hideCatbar === "boolean") config.hideCatbar = body.hideCatbar;
-    if (body.theme === "mobiglas" || body.theme === "drake" || body.theme === "anvil" || body.theme === "greys" || body.theme === "esperia" || body.theme === "misc" || body.theme === "banu" || body.theme === "gatac" || body.theme === "mirai" || body.theme === "origin" || body.theme === "aegis" || body.theme === "crusader" || body.theme === "rsi" || body.theme === "kruger" || body.theme === "argo" || body.theme === "auto") {
+    if (body.theme === "mobiglas" || body.theme === "drake" || body.theme === "anvil" || body.theme === "greys" || body.theme === "esperia" || body.theme === "misc" || body.theme === "banu" || body.theme === "gatac" || body.theme === "mirai" || body.theme === "origin" || body.theme === "aegis" || body.theme === "crusader" || body.theme === "rsi" || body.theme === "kruger" || body.theme === "argo" || body.theme === "cnou" || body.theme === "auto") {
       const t = body.theme as Config["theme"];
       if (t !== "mobiglas" && t !== "auto" && !entitled()) {
         // Pinning a specific manufacturer is subscriber-only → preview it (trial), don't persist.

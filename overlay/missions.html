@@ -74,6 +74,18 @@
     --menu-bg: #0b1006; --title: #E0EFC8; --scan: rgba(131,217,62,.06); --sheen: rgba(180,240,110,.06);
   }
 
+  /* ── Consolidated Outland theme ──────────────────────────────────────────────
+     Frost-white HUD sampled from the Nomad's hydration meter (#CFF0F6): a pale
+     icy cyan chrome — brighter and whiter than Mobiglas's saturated cyan — with
+     warm gold readouts for contrast. Cool theme, so the resize handle stays gold. */
+  :root[data-theme="cnou"] {
+    --cyan: #CFF0F6; --cyan-bright: #EAFBFE; --cyan-text: #DBEEF3; --cyan-dim: #9FBEC7; --faint: #6B8890;
+    --gold: #FFD27A; --amber: #F5C048; --green: #6FE3B0; --red: #FF8478; --track: #0d1a1e;
+    --accent-rgb: 207, 240, 246; --value-rgb: 255, 210, 122; --handle: #FFD27A; /* cool frost theme → gold handle */
+    --panel-top: rgba(16,28,33,.76); --panel-bot: rgba(9,18,22,.84); --panel-solid: rgba(9,18,22,.96);
+    --menu-bg: #0a1519; --title: #EAF7FB; --scan: rgba(207,240,246,.06); --sheen: rgba(220,245,250,.10);
+  }
+
   /* ── Esperia theme ──────────────────────────────────────────────────────────
      Alien-tech cockpit: deep crimson chrome on dark red-black glass with warm amber
      readouts and a fine crimson/gold woven divider — mirrors the red Esperia HUD
@@ -922,6 +934,7 @@
         <option value="rsi">RSI</option>
         <option value="kruger">Kruger</option>
         <option value="argo">Argo</option>
+        <option value="cnou">Consolidated Outland</option>
         <option value="auto">Auto (by ship)</option>
       </select></div>
     <div class="hub-sec">Layout</div>
@@ -1023,7 +1036,7 @@
   let PREFS = { timeRelative: true, hideCatbar: false, missionOcr: false, theme: "mobiglas", overlayTwist: 0, overlayScale: 100 };
   // Apply the category-bar visibility pref via a panel class (composes with the empty-state rule).
   // Themes that ship a manufacturer logo for the folder-tab (Mobiglas + Grey's have none).
-  const BRAND_LOGOS = new Set(["drake","anvil","esperia","misc","banu","gatac","mirai","origin","aegis","crusader","rsi","kruger","argo"]);
+  const BRAND_LOGOS = new Set(["drake","anvil","esperia","misc","banu","gatac","mirai","origin","aegis","crusader","rsi","kruger","argo","cnou"]);
   function updateBrandTab() {
     const root = document.documentElement, tab = document.querySelector(".brandtab");
     if (!tab) return;
