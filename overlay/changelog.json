@@ -1,4 +1,11 @@
 {
+  "0.1.30": [
+    "New Consolidated Outland skin — hop in a Nomad and the overlay picks up its frosty ice-cyan HUD. Grey's now shows its logo in the folder-tab too.",
+    "Updated for the latest patch with fuller crafting recipes, mining and commodity data, and a much larger set of mission payouts.",
+    "The mission-complete card shows the mission's payout again — read from the game data now that the game stopped logging the award.",
+    "Streamers: the overlay broadcasts the manufacturer of the ship you're flying, so your other stream overlays can re-color to match it live. Plus a new \"switch back to Mobiglas when I leave my ship\" option.",
+    "Fixed the binding-chart PNG picker in Settings rendering as a tiny box with no room for the filename."
+  ],
   "0.1.29": [
     "Manufacturer skins! The overlay now automatically matches the ship you're flying — Drake, Aegis, Crusader, RSI, MISC, Origin and more. Free on 'Auto'; subscribers can pin one manufacturer to use it regardless of ship.",
     "Each skin shows its manufacturer logo in a folder-tab on the panel, with brand-specific corner details, dividers, and a reputation bar tinted to match the theme.",
