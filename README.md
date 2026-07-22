@@ -1,5 +1,9 @@
 # SC Overlay
 
+<p align="center">
+  <img src="assets/logo.svg" alt="SC Overlay logo" width="180" />
+</p>
+
 SC Overlay is a desktop companion for Star Citizen. It started as a log watcher, but it has grown into a full in-game overlay for mission tracking, blueprint info, and a few quality-of-life helpers that make the game feel less like a spreadsheet and more like a tool you actually use.
 
 This project is designed to be practical first and transparent second. If a feature needs extra processing, OCR, or a server-side handoff, it is opt-in and clearly separated from the local-first experience.
