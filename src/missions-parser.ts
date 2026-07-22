@@ -65,6 +65,17 @@ export function contractKeyOf(contract: string): string {
   return contract.replace(/_\d+$/, "");
 }
 
+function normalizeMissionTitle(title: string | null): string | null {
+  if (!title) return null;
+  return title
+    .replace(/<[^>]+>/g, "")
+    .replace(/\[(?:BP|N Rep|Rep|BP\*)[^\]]*\]/g, "")
+    .replace(/\s*\*\s*/g, " ")
+    .replace(/^[*•\s]+|[*•\s]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const RE = {
   acceptTitle: /Added notification "Contract Accepted:\s*(.+?):\s*"/,
   completeTitle: /Added notification "Contract Complete:\s*(.+?):\s*"/,
@@ -100,12 +111,14 @@ export function parseMissionEvent(e: LogEvent): MissionEvent | null {
       const acc = m.match(RE.acceptTitle);
       if (acc) {
         const mid = m.match(RE.missionIdField);
-        if (mid) return { kind: "accept", ts: e.timestamp, missionId: mid[1], title: acc[1].trim() };
+        const title = normalizeMissionTitle(acc[1]);
+        if (mid) return { kind: "accept", ts: e.timestamp, missionId: mid[1], title };
       }
       const cc = m.match(RE.completeTitle);
       if (cc) {
         const mid = m.match(RE.missionIdField);
-        return { kind: "contractComplete", ts: e.timestamp, missionId: mid?.[1] ?? null, title: cc[1].trim() };
+        const title = normalizeMissionTitle(cc[1]);
+        return { kind: "contractComplete", ts: e.timestamp, missionId: mid?.[1] ?? null, title };
       }
       const rw = m.match(RE.reward);
       if (rw) {

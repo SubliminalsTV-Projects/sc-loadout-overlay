@@ -1,108 +1,71 @@
-# SC Log Watcher
+# SC Overlay
 
-Tails the Star Citizen `game.log` and emits structured events. This is the
-foundation layer — the watcher core only reads, parses, and emits. Apps
-(overlays, dashboards, Discord alerts, etc.) plug in as event handlers.
+SC Overlay is a desktop companion for Star Citizen. It started as a log watcher, but it has grown into a full in-game overlay for mission tracking, blueprint info, and a few quality-of-life helpers that make the game feel less like a spreadsheet and more like a tool you actually use.
 
-Zero runtime dependencies — pure Node built-ins.
+This project is designed to be practical first and transparent second. If a feature needs extra processing, OCR, or a server-side handoff, it is opt-in and clearly separated from the local-first experience.
 
-**Apps built on it:** a ship-loadout overlay (erkul.games), and a **[Mission &
-Blueprint Tracker](BLUEPRINTS.md)** that shows the reward pool of the mission you're
-tracking and checks off what you've collected.
+## What it does
 
-## Run the demo
+- Mission and blueprint tracking: follow the mission you are currently tracking, see its blueprint pool, and mark what you have already collected.
+- Fabricator helper: optional OCR can identify a fabrication kiosk item and help build a capture for the blueprint catalog.
+- Mining and refinement helpers: useful context while you play, without making the overlay feel like a second job.
+- Optional sync features: if you enable them, the app can send data to my servers for account-based or collection-related features.
+
+## Privacy and opt-in
+
+This matters.
+
+- OCR features are opt-in. They are not enabled by default.
+- Any feature that sends data to my servers is opt-in. If you do not enable it, nothing leaves your machine.
+- The core experience is local-first. The overlay can work without sending your data anywhere.
+- If you do not want a feature, leave it off. That is the intended default.
+
+In plain English: if you want the extra automation, you turn it on. If you do not, the app still works and stays local.
+
+## How it works
+
+The app watches Star Citizen's game log and turns it into structured events. Those events feed the overlay UI, which can surface mission info, blueprint progress, and other helpers while you play.
+
+Optional OCR can be enabled when you want help reading fabrication screens. That is a separate path from the local mission-tracking experience.
+
+## Quick start
+
+Requirements:
+
+- Windows
+- Node.js
+- Star Citizen installed and running
+
+Install dependencies:
 
 ```bash
 npm install
-npm run start      # tails the default log path, prints parsed events
 ```
 
-Override the log path if your install differs:
+Launch the overlay app:
 
 ```bash
-# PowerShell
-$env:SC_LOG_PATH="D:\Games\StarCitizen\LIVE\game.log"; npm run start
+npm run overlay-app
 ```
 
-`npm run dev` does the same with auto-reload on source changes.
+If you want to run the server-side overlay pieces separately:
 
-## Using the watcher in your own app
-
-```ts
-import { LogWatcher } from "./src/watcher.js";
-
-const watcher = new LogWatcher(logPath, {
-  pollInterval: 500,   // ms between file checks
-  readExisting: false, // false = tail new lines only; true = replay current session
-});
-
-watcher.on("event", (e) => {
-  // e: { raw, timestamp, severity, eventTag, tags, message }
-  if (e.eventTag === "Actor Death") {
-    // ...do something
-  }
-});
-
-watcher.on("rotate", () => {/* new game session started */});
-watcher.start();
+```bash
+npm run overlay
 ```
 
-### Events
+## Development notes
 
-| Event    | Payload          | Meaning                                            |
-| -------- | ---------------- | -------------------------------------------------- |
-| `event`  | `LogEvent`       | A parsed line.                                     |
-| `line`   | `string`         | The same line, unparsed.                           |
-| `appear` | —                | The log file came into existence.                  |
-| `rotate` | —                | File truncated/replaced — a new session began.     |
-| `error`  | `Error`          | Non-fatal read error; polling continues.           |
+Useful commands:
 
-### Parsed `LogEvent` shape
-
-```
-<2026-06-04T01:34:29.449Z> [Notice] <CreateChannel> Opening channel ... [Team_OnlineTech][gRPC]
+```bash
+npm run build
+npm run typecheck
+npm run overlay-app
 ```
 
-becomes
+## Project status
 
-```ts
-{
-  raw:       "<2026-...> [Notice] <CreateChannel> Opening channel ... [Team_OnlineTech][gRPC]",
-  timestamp: "2026-06-04T01:34:29.449Z",
-  severity:  "Notice",
-  eventTag:  "CreateChannel",
-  tags:      ["Team_OnlineTech", "gRPC"],
-  message:   "Opening channel ...",
-}
-```
+This repository is public for transparency and to accept contributions, but it is not open source. The software is licensed under the PolyForm Strict License 1.0.0. You may read the code, ask questions, and contribute improvements, but you may not redistribute it, ship a modified or rebranded build, or use it commercially without a separate written license.
 
-All fields except `raw` and `message` are nullable / may be empty — plain lines
-(no timestamp, severity, or tag) parse to just a `message`.
-
-## How it handles the log's quirks
-
-- **Rotation:** SC truncates/overwrites `game.log` on every launch. Detected as
-  the file shrinking below the read position → reset to 0, emit `rotate`, read
-  the new session from the top.
-- **Live writes / file lock:** the game holds the file open and writes to it
-  continuously. A fresh read handle is opened per poll (shared access), so the
-  watcher never fights the lock or holds a stale handle.
-- **Partial lines:** a line still being written (no trailing newline yet) is
-  buffered and reassembled on the next read.
-- **Not launched yet:** if the file doesn't exist, the watcher waits and emits
-  `appear` once it shows up.
-
-## Layout
-
-- `src/parser.ts` — `parseLine(raw)` → `LogEvent`. Pure, no I/O.
-- `src/watcher.ts` — `LogWatcher`, the tailer + emitter.
-- `src/index.ts`  — demo entry point.
-
-## License
-
-Copyright © 2026 SubliminalsTV. The source is public so you can see how the tracker
-works and contribute improvements, but it is **not** open source — it's licensed under
-the [PolyForm Strict License 1.0.0](LICENSE.md). You may read the code and submit pull
-requests; you may not redistribute it, ship a modified or rebranded build, or use it
-commercially without written permission. Contributions are welcome and, once merged,
-are covered by the same license.
+If you want to contribute, the best path is to keep the changes aligned with the project's current direction: useful, local-first, and transparent.

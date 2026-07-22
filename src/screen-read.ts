@@ -269,6 +269,39 @@ export function resolveName(
     if (en === n || fold(en) === nf) return { name: e.name, item: e.item, match: "exact" };
   }
 
+  const looseFold = (s: string) => {
+    const folded = s
+      .replace(/[0]/g, "O")
+      .replace(/[1|]/g, "I")
+      .replace(/\bSO\b/g, "S0")
+      .replace(/\bIO\b/g, "I0")
+      .replace(/\bSI\b/g, "S1")
+      .replace(/\bII\b/g, "I1");
+    return folded.replace(/\bS([OI])\b/g, "S0").replace(/\b([A-Z])([OI])\b/g, "$10");
+  };
+  const lf = looseFold(n);
+  for (const e of catalog) {
+    const en = normName(e.name);
+    if (looseFold(en) === lf) return { name: e.name, item: e.item, match: "exact" };
+  }
+
+  const shortTokenLoose = (s: string) => {
+    const parts = s.split(" ").filter(Boolean);
+    return parts.some((p) => /^S[0O]$/i.test(p) || /^S[1I]$/i.test(p) || /^X[Ll]?[- ]?[1I]$/i.test(p));
+  };
+  if (shortTokenLoose(n)) {
+    for (const e of catalog) {
+      const en = normName(e.name);
+      if (shortTokenLoose(en)) {
+        const a = n.replace(/[^A-Z0-9]/g, "");
+        const b = en.replace(/[^A-Z0-9]/g, "");
+        if (a === b || a.replace(/[0]/g, "O").replace(/[1|]/g, "I") === b.replace(/[0]/g, "O").replace(/[1|]/g, "I")) {
+          return { name: e.name, item: e.item, match: "exact" };
+        }
+      }
+    }
+  }
+
   const nt = new Set(n.split(" "));
   const jaccard = catalog
     .map((e) => {

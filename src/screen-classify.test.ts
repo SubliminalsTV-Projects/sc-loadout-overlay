@@ -18,6 +18,7 @@ const CATALOG: CatalogEntry[] = [
   { name: "Palisade", item: "15ebdff2-2724-4fb3-abbf-db20e150da77" },
   { name: "TS-2", item: "8ea47c7e-f70f-469d-abc2-911cc5013854" },
   { name: "XL-1", item: "fce50a6d-690e-4b2d-9104-f3743387e1f0" },
+  { name: "Aegis Dynamics S0", item: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
 ];
 
 // Build an OcrResult from [text, x, y] rows (w/h don't matter for these gates).
@@ -57,6 +58,15 @@ const notKiosk = frame([
   ["Vehicles SHIELDS", 400, 500],
   ["Tier", 700, 500],
 ]);
+// Another common OCR failure: a zero in a size suffix is read as the letter O, e.g. "S0"
+// becomes "SO". The resolver should still match the catalog entry.
+const s0 = frame([
+  ["FABRICATION KIOSK //FABRICATE", 355, 140],
+  ["SO", 2380, 1059],
+  ["Vehicles SHIELDS", 2339, 1125],
+  ["Tier", 2828, 1114],
+  ["X close", 3411, 130],
+]);
 // Kiosk anchor present but the item area is unreadable (name/category didn't come through) ->
 // a fabricator read with no item, so the capture loop can tell the user rather than fail silently.
 const unreadable = frame([
@@ -80,6 +90,9 @@ check("non-kiosk screen is NOT a fabricator", notRead.kind !== "fabricator", not
 
 const unRead = classifyScreen(unreadable, CATALOG);
 check("kiosk-but-unreadable -> fabricator with no item", unRead.kind === "fabricator" && unRead.item === null);
+
+const s0Read = classifyScreen(s0, CATALOG);
+check("size-zero 'SO' still classifies as fabricator", s0Read.kind === "fabricator");
 
 if (failed) {
   console.error(`\n${failed} case(s) FAILED`);
