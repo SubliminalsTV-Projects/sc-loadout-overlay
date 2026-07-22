@@ -1,84 +1,117 @@
 {
-  "0.1.31": [
-    "The fabricator reader can no longer get stuck — if a scan or upload ever hangs, it recovers on its own instead of sitting on \"Reading the fabricator…\" until you restart the app.",
-    "Captured item images upload reliably now: a failed upload retries by itself, and on startup the app re-checks and sends up any captures that never made it to the site — no more \"it said it saved but never showed up.\"",
-    "Clearer scanning status — the overlay names the item it's reading, and tells you the truth about uploads: \"shared\" only once the picture is actually on the site, \"upload failed — retrying\" otherwise (no more misleading \"saved\").",
-    "The What's New card now shows the last several versions, so if you've been away for a bit you can catch up on everything you missed — not just the newest patch."
-  ],
-  "0.1.30": [
-    "New Consolidated Outland skin — hop in a Nomad and the overlay picks up its frosty ice-cyan HUD. Grey's now shows its logo in the folder-tab too.",
-    "Updated for the latest patch with fuller crafting recipes, mining and commodity data, and a much larger set of mission payouts.",
-    "The mission-complete card shows the mission's payout again — read from the game data now that the game stopped logging the award.",
-    "Streamers: the overlay broadcasts the manufacturer of the ship you're flying, so your other stream overlays can re-color to match it live. Plus a new \"switch back to Mobiglas when I leave my ship\" option.",
-    "Fixed the binding-chart PNG picker in Settings rendering as a tiny box with no room for the filename.",
-    "Fixed ship components (quantum drives, shields and the like) not scanning at the Fabrication Kiosk on 4K/high-scale displays — the reader now tolerates OCR glitches in the kiosk text, and when it truly can't read an item it tells you instead of sitting silently on \"Watching Star Citizen…\".",
-    "Manufacturer skins now stay pinned for active Twitch subscribers — connect the tracker to subliminal.gg and link your Twitch, and your chosen skin sticks instead of reverting after the preview.",
-    "Multi-monitor: in Arrange mode you can now drag a widget onto a second display — it crosses seamlessly and stays there, and the Arrange controls always stay on your primary monitor."
-  ],
-  "0.1.29": [
-    "Manufacturer skins! The overlay now automatically matches the ship you're flying — Drake, Aegis, Crusader, RSI, MISC, Origin and more. Free on 'Auto'; subscribers can pin one manufacturer to use it regardless of ship.",
-    "Each skin shows its manufacturer logo in a folder-tab on the panel, with brand-specific corner details, dividers, and a reputation bar tinted to match the theme.",
-    "Smarter blueprint image capture: items that render as a dark schematic (like quantum drives) are now captured instead of skipped, and same-name size variants (e.g. the mining lasers) resolve to the right one.",
-    "Fixed same-named blueprints (like the three Cinch Scraper Modules) so they all share the item image instead of only one showing a picture."
-  ],
-  "0.1.28": [
-    "New name: this is now SC Overlay. It's grown well past just blueprints — mining, loadouts, and more — so the name caught up. Your settings and your whole collection carry over untouched.",
-    "The Mining Assistant is now part of the main overlay instead of its own separate window. That fixes the annoying stuff: clicking one widget while another's open just works now, and nothing steals a click you meant for the game.",
-    "A much cleaner Settings page. Everything's sorted into categories with the opt-in features up top, each setting is a single line with an ⓘ you can hover for the details, and changes save the moment you make them — no more hunting for a Save button.",
-    "New: put a widget on a second monitor or your phone. Settings now gives you copy-ready links for the Blueprint and Mining widgets (and OBS browser-source URLs), including one that works from your phone on the same Wi-Fi.",
-    "The mining scanner now ignores tiny signatures under 2,000, so it stops calling out every little scrap of debris.",
-    "New: partner promos in Settings — deals from the brands that support the channel, at no extra cost to you."
-  ],
-  "0.1.27": [
-    "New: the overlay is now an “overlay app” — the Blueprint tracker and Mining Assistant float freely on your screen. Drag them anywhere, resize each from its corner, and give each its own angle so a left and a right widget can lean in toward you.",
-    "New: an Arrange mode that moves everything at once. Grab a widget's ⠿ handle (or press Ctrl+Alt+M) and the whole screen shows it's in edit mode — drag, resize, then hit Done. Your layout is saved and survives updates.",
-    "New: a settings menu that appears top-right whenever you're working with the overlay — widget on/off, theme, and a way into everything. It fades away when you're done so it's not in your face while you fly.",
-    "The Mining Assistant now matches your ship's theme too — hop in a Drake and it goes gunmetal-and-orange right alongside the tracker.",
-    "Widgets now sit flat by default with a slight inward tilt; set each one's exact angle in its ⚙. And these patch notes now pop up in the middle of the screen on launch."
-  ],
-  "0.1.26": [
-    "Fixed: “Restart as administrator” now actually relaunches the app elevated. It was closing the tracker and never reopening it, leaving stray processes you had to kill by hand — that's sorted."
-  ],
-  "0.1.25": [
-    "New: the Mining Assistant — a second overlay window (tray → Mining Assistant, or press Shift+F3) that names rocks from the mining scanner's signature, counts down your refinery jobs and alarms when they finish, and calls out your target rocks in the HAL voice. It matches the main overlay's look and stays click-through until you hover it, so you won't nudge it mid-flight.",
-    "Fixed: your hotkeys now work while Star Citizen is focused, not just when you alt-tab to the desktop. If they still don't fire in-game, open Settings → In-Game Hotkeys and hit “Restart as administrator”.",
-    "Fixed: opening an overlay (like the binding chart) can no longer bury the Settings window — Settings now always stays on top.",
-    "Fixed: two features can no longer grab the same hotkey by accident."
-  ],
-  "0.1.24": [
-    "New: a reputation bar in Mission Info shows your current standing with each mission giver (e.g. Sr. Contractor) and how close you are to the next rank — worked out from the missions you've completed since the last wipe. Hit “Verify from logs” in the ⚙ to fill it in from your play history.",
-    "Fixed: your tracked missions no longer disappear when you relaunch or Alt-F4 back into the game — they were getting wiped on every login.",
-    "Fixed: blueprint pools no longer show duplicate entries. On newer game builds the tracker could fall back to an older, stale copy of the mission data.",
-    "The opt-in mission-name scanner now reads mining, scanning and most other mission types, not only “Go to” missions."
-  ],
-  "0.1.23": [
-    "Fixed: missions that don't place a map marker — mining, ore scanning and friends — used to show nothing at all. They now resolve their blueprint pool and appear in the mission picker like everything else.",
-    "New: your rank with each mission giver, worked out from the highest-rank mission you've been offered. Hit “Verify from logs” in the ⚙ to backfill it from your play history.",
-    "The guaranteed rewards and the random blueprint pool are now clearly separated — the pool says “1 random blueprint per completion”, because that's what it is.",
-    "Guaranteed item rewards now have their own tick box, so you can check off the ones you've picked up (kept separate from your blueprint count).",
-    "The owned count moved up next to the mission name — the ⚙ and move handle were sitting on top of it.",
-    "A long blueprint pool no longer pushes the panel sideways into a horizontal scrollbar.",
-    "The header now reads “Active Mission” instead of a second “Blueprint Pool”."
-  ],
-  "0.1.22": [
-    "New: the overlay diamond glows purple when SubliminalsTV is live on Twitch — hover it and click to jump into the stream.",
-    "In the Fabricator, the diamond glows gold so you can tell the tracker sees the kiosk.",
-    "Both opt-in screen-reading features (pinned-mission scan + item-image capture) now appear in Settings and the overlay ⚙, and stay in sync.",
-    "Open the full Settings window straight from the overlay ⚙.",
-    "Pasting a sync token now turns syncing on automatically — no more forgetting the checkbox.",
-    "New: a settings ⚙ on the overlay — the odds view (base / your real odds) and “Verify from logs” now live in there, and you can hide the category filter bar, for a cleaner HUD.",
-    "Cleaner footer: your Collected count is now big and clear, with the tracker version and game build stacked neatly beside it.",
-    "The overlay now shows what the item-image scanner is doing — a quick toast when it reads your pinned mission or captures a fabricator item, plus a live status in the ⚙ menu.",
-    "New: toggle mission-name scanning on/off from the overlay ⚙ menu (reads the mission you have pinned in-game — off by default).",
-    "Fixed: the pinned-mission reader now recognizes missions whose names are cut off on-screen or contain quotes (e.g. Terrorist Shigemori \"Jester\" Amsden…).",
-    "Mission Info (faction / type / reputation) now opens by default.",
-    "Settings tidied up for the blueprint tracker."
-  ],
-  "0.1.21": [
-    "Mission-Complete card now shows the actual item render for each blueprint you unlock — one big image for a single drop, a grid for more.",
-    "New: opt-in log sharing (Settings) — help improve mission & blueprint detection. Your handle, account, IP and chat are stripped before anything is sent. Off by default.",
-    "Recent lists can now show relative time (\"2h ago\") or the exact date & clock — toggle in Settings.",
-    "Settings window restyled to match subliminal.gg.",
-    "The tracker's source code is now public on GitHub."
-  ]
+  "0.1.31": {
+    "date": "2026-07-22T00:05:45Z",
+    "notes": [
+      "The fabricator reader can no longer get stuck — if a scan or upload ever hangs, it recovers on its own instead of sitting on \"Reading the fabricator…\" until you restart the app.",
+      "Captured item images upload reliably now: a failed upload retries by itself, and on startup the app re-checks and sends up any captures that never made it to the site — no more \"it said it saved but never showed up.\"",
+      "Clearer scanning status — the overlay names the item it's reading, and tells you the truth about uploads: \"shared\" only once the picture is actually on the site, \"upload failed — retrying\" otherwise (no more misleading \"saved\").",
+      "The What's New card now shows the last several versions, so if you've been away for a bit you can catch up on everything you missed — not just the newest patch."
+    ]
+  },
+  "0.1.30": {
+    "date": "2026-07-21T22:06:42Z",
+    "notes": [
+      "New Consolidated Outland skin — hop in a Nomad and the overlay picks up its frosty ice-cyan HUD. Grey's now shows its logo in the folder-tab too.",
+      "Updated for the latest patch with fuller crafting recipes, mining and commodity data, and a much larger set of mission payouts.",
+      "The mission-complete card shows the mission's payout again — read from the game data now that the game stopped logging the award.",
+      "Streamers: the overlay broadcasts the manufacturer of the ship you're flying, so your other stream overlays can re-color to match it live. Plus a new \"switch back to Mobiglas when I leave my ship\" option.",
+      "Fixed the binding-chart PNG picker in Settings rendering as a tiny box with no room for the filename.",
+      "Fixed ship components (quantum drives, shields and the like) not scanning at the Fabrication Kiosk on 4K/high-scale displays — the reader now tolerates OCR glitches in the kiosk text, and when it truly can't read an item it tells you instead of sitting silently on \"Watching Star Citizen…\".",
+      "Manufacturer skins now stay pinned for active Twitch subscribers — connect the tracker to subliminal.gg and link your Twitch, and your chosen skin sticks instead of reverting after the preview.",
+      "Multi-monitor: in Arrange mode you can now drag a widget onto a second display — it crosses seamlessly and stays there, and the Arrange controls always stay on your primary monitor."
+    ]
+  },
+  "0.1.29": {
+    "date": "2026-07-21T05:13:22Z",
+    "notes": [
+      "Manufacturer skins! The overlay now automatically matches the ship you're flying — Drake, Aegis, Crusader, RSI, MISC, Origin and more. Free on 'Auto'; subscribers can pin one manufacturer to use it regardless of ship.",
+      "Each skin shows its manufacturer logo in a folder-tab on the panel, with brand-specific corner details, dividers, and a reputation bar tinted to match the theme.",
+      "Smarter blueprint image capture: items that render as a dark schematic (like quantum drives) are now captured instead of skipped, and same-name size variants (e.g. the mining lasers) resolve to the right one.",
+      "Fixed same-named blueprints (like the three Cinch Scraper Modules) so they all share the item image instead of only one showing a picture."
+    ]
+  },
+  "0.1.28": {
+    "date": "2026-07-20T21:54:16Z",
+    "notes": [
+      "New name: this is now SC Overlay. It's grown well past just blueprints — mining, loadouts, and more — so the name caught up. Your settings and your whole collection carry over untouched.",
+      "The Mining Assistant is now part of the main overlay instead of its own separate window. That fixes the annoying stuff: clicking one widget while another's open just works now, and nothing steals a click you meant for the game.",
+      "A much cleaner Settings page. Everything's sorted into categories with the opt-in features up top, each setting is a single line with an ⓘ you can hover for the details, and changes save the moment you make them — no more hunting for a Save button.",
+      "New: put a widget on a second monitor or your phone. Settings now gives you copy-ready links for the Blueprint and Mining widgets (and OBS browser-source URLs), including one that works from your phone on the same Wi-Fi.",
+      "The mining scanner now ignores tiny signatures under 2,000, so it stops calling out every little scrap of debris.",
+      "New: partner promos in Settings — deals from the brands that support the channel, at no extra cost to you."
+    ]
+  },
+  "0.1.27": {
+    "date": "2026-07-19T04:13:10Z",
+    "notes": [
+      "New: the overlay is now an “overlay app” — the Blueprint tracker and Mining Assistant float freely on your screen. Drag them anywhere, resize each from its corner, and give each its own angle so a left and a right widget can lean in toward you.",
+      "New: an Arrange mode that moves everything at once. Grab a widget's ⠿ handle (or press Ctrl+Alt+M) and the whole screen shows it's in edit mode — drag, resize, then hit Done. Your layout is saved and survives updates.",
+      "New: a settings menu that appears top-right whenever you're working with the overlay — widget on/off, theme, and a way into everything. It fades away when you're done so it's not in your face while you fly.",
+      "The Mining Assistant now matches your ship's theme too — hop in a Drake and it goes gunmetal-and-orange right alongside the tracker.",
+      "Widgets now sit flat by default with a slight inward tilt; set each one's exact angle in its ⚙. And these patch notes now pop up in the middle of the screen on launch."
+    ]
+  },
+  "0.1.26": {
+    "date": "2026-07-18T18:38:13Z",
+    "notes": [
+      "Fixed: “Restart as administrator” now actually relaunches the app elevated. It was closing the tracker and never reopening it, leaving stray processes you had to kill by hand — that's sorted."
+    ]
+  },
+  "0.1.25": {
+    "date": "2026-07-18T09:40:53Z",
+    "notes": [
+      "New: the Mining Assistant — a second overlay window (tray → Mining Assistant, or press Shift+F3) that names rocks from the mining scanner's signature, counts down your refinery jobs and alarms when they finish, and calls out your target rocks in the HAL voice. It matches the main overlay's look and stays click-through until you hover it, so you won't nudge it mid-flight.",
+      "Fixed: your hotkeys now work while Star Citizen is focused, not just when you alt-tab to the desktop. If they still don't fire in-game, open Settings → In-Game Hotkeys and hit “Restart as administrator”.",
+      "Fixed: opening an overlay (like the binding chart) can no longer bury the Settings window — Settings now always stays on top.",
+      "Fixed: two features can no longer grab the same hotkey by accident."
+    ]
+  },
+  "0.1.24": {
+    "date": "2026-07-18T03:38:27Z",
+    "notes": [
+      "New: a reputation bar in Mission Info shows your current standing with each mission giver (e.g. Sr. Contractor) and how close you are to the next rank — worked out from the missions you've completed since the last wipe. Hit “Verify from logs” in the ⚙ to fill it in from your play history.",
+      "Fixed: your tracked missions no longer disappear when you relaunch or Alt-F4 back into the game — they were getting wiped on every login.",
+      "Fixed: blueprint pools no longer show duplicate entries. On newer game builds the tracker could fall back to an older, stale copy of the mission data.",
+      "The opt-in mission-name scanner now reads mining, scanning and most other mission types, not only “Go to” missions."
+    ]
+  },
+  "0.1.23": {
+    "date": "2026-07-17T14:27:39Z",
+    "notes": [
+      "Fixed: missions that don't place a map marker — mining, ore scanning and friends — used to show nothing at all. They now resolve their blueprint pool and appear in the mission picker like everything else.",
+      "New: your rank with each mission giver, worked out from the highest-rank mission you've been offered. Hit “Verify from logs” in the ⚙ to backfill it from your play history.",
+      "The guaranteed rewards and the random blueprint pool are now clearly separated — the pool says “1 random blueprint per completion”, because that's what it is.",
+      "Guaranteed item rewards now have their own tick box, so you can check off the ones you've picked up (kept separate from your blueprint count).",
+      "The owned count moved up next to the mission name — the ⚙ and move handle were sitting on top of it.",
+      "A long blueprint pool no longer pushes the panel sideways into a horizontal scrollbar.",
+      "The header now reads “Active Mission” instead of a second “Blueprint Pool”."
+    ]
+  },
+  "0.1.22": {
+    "date": "2026-07-09T21:02:23Z",
+    "notes": [
+      "New: the overlay diamond glows purple when SubliminalsTV is live on Twitch — hover it and click to jump into the stream.",
+      "In the Fabricator, the diamond glows gold so you can tell the tracker sees the kiosk.",
+      "Both opt-in screen-reading features (pinned-mission scan + item-image capture) now appear in Settings and the overlay ⚙, and stay in sync.",
+      "Open the full Settings window straight from the overlay ⚙.",
+      "Pasting a sync token now turns syncing on automatically — no more forgetting the checkbox.",
+      "New: a settings ⚙ on the overlay — the odds view (base / your real odds) and “Verify from logs” now live in there, and you can hide the category filter bar, for a cleaner HUD.",
+      "Cleaner footer: your Collected count is now big and clear, with the tracker version and game build stacked neatly beside it.",
+      "The overlay now shows what the item-image scanner is doing — a quick toast when it reads your pinned mission or captures a fabricator item, plus a live status in the ⚙ menu.",
+      "New: toggle mission-name scanning on/off from the overlay ⚙ menu (reads the mission you have pinned in-game — off by default).",
+      "Fixed: the pinned-mission reader now recognizes missions whose names are cut off on-screen or contain quotes (e.g. Terrorist Shigemori \"Jester\" Amsden…).",
+      "Mission Info (faction / type / reputation) now opens by default.",
+      "Settings tidied up for the blueprint tracker."
+    ]
+  },
+  "0.1.21": {
+    "date": "2026-07-08T19:04:32Z",
+    "notes": [
+      "Mission-Complete card now shows the actual item render for each blueprint you unlock — one big image for a single drop, a grid for more.",
+      "New: opt-in log sharing (Settings) — help improve mission & blueprint detection. Your handle, account, IP and chat are stripped before anything is sent. Off by default.",
+      "Recent lists can now show relative time (\"2h ago\") or the exact date & clock — toggle in Settings.",
+      "Settings window restyled to match subliminal.gg.",
+      "The tracker's source code is now public on GitHub."
+    ]
+  }
 }

@@ -794,6 +794,7 @@
   #whatsnew .wn-group:first-child { margin-top: 3px; }
   #whatsnew .wn-gver { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
     color: var(--gold); padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+  #whatsnew .wn-date { font-weight: 400; letter-spacing: 0.02em; color: var(--cyan-dim); margin-left: 4px; }
   /* Older versions collapse (<details>): a clickable version header with a disclosure caret. */
   #whatsnew details.wn-group > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 7px; }
   #whatsnew details.wn-group > summary::-webkit-details-marker { display: none; }
@@ -994,7 +995,7 @@
       </div>
       <div id="wnList"></div>
       <div class="wn-foot">
-        <label class="wn-dismiss"><input type="checkbox" id="wnDontShow" checked /> Don't show this again</label>
+        <label class="wn-dismiss"><input type="checkbox" id="wnDontShow" /> Don't show this again</label>
         <button class="wn-close" id="wnCloseBtn">Got it</button>
       </div>
     </div>
@@ -1959,13 +1960,24 @@
         // Header chip = newest version; body groups the last few versions so a returning user
         // sees everything they missed across our fast patches, not just the latest.
         $("wnVer").textContent = "v" + (entries[0].version || version);
+        // Release date/time in UTC (Sub ships multiple times a day, so the time matters).
+        const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const p2 = (n) => String(n).padStart(2, "0");
+        const fmtUTC = (iso) => {
+          if (!iso) return "";
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return "";
+          return MON[d.getUTCMonth()] + " " + d.getUTCDate() + ", " + d.getUTCFullYear() + " · " + p2(d.getUTCHours()) + ":" + p2(d.getUTCMinutes()) + " UTC";
+        };
         // Newest version is expanded; older ones (2..5) are collapsed <details> — click to expand.
         // Keeps the card short by default while still letting a returning user catch up on all of them.
         $("wnList").innerHTML = entries.map((e, i) => {
           const bullets = "<ul>" + e.notes.map((n) => "<li>" + escapeHtml(n) + "</li>").join("") + "</ul>";
+          const dt = fmtUTC(e.date);
+          const head = "v" + escapeHtml(e.version) + (dt ? ' <span class="wn-date">' + dt + "</span>" : "");
           return i === 0
-            ? '<div class="wn-group"><div class="wn-gver">v' + escapeHtml(e.version) + "</div>" + bullets + "</div>"
-            : '<details class="wn-group"><summary class="wn-gver">v' + escapeHtml(e.version) + "</summary>" + bullets + "</details>";
+            ? '<div class="wn-group"><div class="wn-gver">' + head + "</div>" + bullets + "</div>"
+            : '<details class="wn-group"><summary class="wn-gver">' + head + "</summary>" + bullets + "</details>";
         }).join("");
         card.classList.add("show");
         window.overlayApi.setModal?.(true);

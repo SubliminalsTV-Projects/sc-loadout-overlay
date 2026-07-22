@@ -36,11 +36,15 @@ if (!APP_VERSION) {
 const LOG_SHARE_INTERVAL_MS = 20 * 60 * 1000;
 setInterval(() => void maybeShareLog(config, APP_VERSION), LOG_SHARE_INTERVAL_MS);
 
-// "What's new" notes per version (overlay/changelog.json), cached after first read.
-let changelogCache: Record<string, string[]> | null = null;
-function loadChangelog(): Record<string, string[]> {
+// "What's new" per version (overlay/changelog.json), cached after first read. Each entry is
+// { date, notes } (date = UTC release time); a bare string[] is accepted for backward-compat.
+type ChangelogEntry = string[] | { date?: string | null; notes: string[] };
+const clNotes = (e: ChangelogEntry | undefined): string[] => (Array.isArray(e) ? e : e?.notes ?? []);
+const clDate = (e: ChangelogEntry | undefined): string | null => (Array.isArray(e) ? null : e?.date ?? null);
+let changelogCache: Record<string, ChangelogEntry> | null = null;
+function loadChangelog(): Record<string, ChangelogEntry> {
   if (changelogCache) return changelogCache;
-  let parsed: Record<string, string[]> = {};
+  let parsed: Record<string, ChangelogEntry> = {};
   try {
     parsed = JSON.parse(readFileSync(join(overlayDir, "changelog.json"), "utf8"));
   } catch {
@@ -947,7 +951,7 @@ const server = createServer(async (req, res) => {
       for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pb[i] || 0) - (pa[i] || 0);
       return 0;
     };
-    const entries = Object.keys(cl).sort(cmpDesc).slice(0, 5).map((v) => ({ version: v, notes: cl[v] ?? [] }));
+    const entries = Object.keys(cl).sort(cmpDesc).slice(0, 5).map((v) => ({ version: v, notes: clNotes(cl[v]), date: clDate(cl[v]) }));
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     res.end(JSON.stringify({ version: ver, entries, seen: config.seenChangelog === ver }));
     return;
