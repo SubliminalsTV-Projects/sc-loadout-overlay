@@ -90,6 +90,10 @@ interface Config {
   miningAutoShow: boolean;
   /** Remembers whether the Mining Assistant window was left open, so it's restored on launch. */
   miningOpen: boolean;
+  /** Remembers whether the Notepad widget was left open, so it's restored on launch. */
+  notepadOpen: boolean;
+  /** Notepad text-size multiplier (0.8–2.0) so notes stay readable on 1080p → 4K panels. */
+  notepadFontScale: number;
   /** Path to a user-chosen WAV to use as the alert tone (empty = built-in synth tone). */
   miningTone: string;
   /** GPU hardware acceleration for the Electron overlay. OFF by default — it composites
@@ -168,6 +172,8 @@ const DEFAULTS: Config = {
   miningAssistant: false,
   miningAutoShow: false,
   miningOpen: false,
+  notepadOpen: false,
+  notepadFontScale: 1,
   miningTone: "",
   hwAccel: false,
   amdCompat: false,
@@ -248,6 +254,40 @@ const saveConfig = async (): Promise<void> => {
     console.error("[config] save failed:", String(e));
   }
 };
+
+// ── Notepad (local-only scratch notes) ───────────────────────────────────────
+// A flat list of notes stored beside config.json in the per-user dir (NEVER next to
+// the binary — Program Files is read-only). The Notepad widget owns the UI and POSTs
+// the whole array back on edit; single-user/single-window, so no merge is needed.
+const notesPath = join(userDir, "notes.json");
+interface Note { id: string; title: string; body: string; createdAt: number; updatedAt: number; }
+function readNotes(): Note[] {
+  try {
+    if (!existsSync(notesPath)) return [];
+    const parsed = JSON.parse(readFileSync(notesPath, "utf8"));
+    return Array.isArray(parsed?.notes) ? parsed.notes : [];
+  } catch { return []; }
+}
+async function saveNotes(notes: Note[]): Promise<void> {
+  try {
+    mkdirSync(userDir, { recursive: true });
+    await writeFile(notesPath, JSON.stringify({ notes }, null, 2));
+  } catch (e) {
+    console.error("[notes] save failed:", String(e));
+  }
+}
+// Clamp an incoming note array (cap counts + field sizes so a runaway client can't bloat the file).
+function sanitizeNotes(input: unknown): Note[] {
+  if (!Array.isArray(input)) return [];
+  const now = Date.now();
+  return input.slice(0, 500).map((n: any): Note => ({
+    id: typeof n?.id === "string" && n.id ? n.id.slice(0, 64) : now.toString(36) + Math.random().toString(36).slice(2, 8),
+    title: typeof n?.title === "string" ? n.title.slice(0, 200) : "",
+    body: typeof n?.body === "string" ? n.body.slice(0, 20000) : "",
+    createdAt: Number.isFinite(n?.createdAt) ? n.createdAt : now,
+    updatedAt: Number.isFinite(n?.updatedAt) ? n.updatedAt : now,
+  }));
+}
 
 // First run / wrong channel: if the configured game.log doesn't exist, auto-detect the
 // most recently played channel so the app works without the user hunting for the path.
@@ -1011,6 +1051,9 @@ const server = createServer(async (req, res) => {
     if (typeof body.miningAssistant === "boolean") config.miningAssistant = body.miningAssistant;
     if (typeof body.miningAutoShow === "boolean") config.miningAutoShow = body.miningAutoShow;
     if (typeof body.miningOpen === "boolean") config.miningOpen = body.miningOpen;
+    if (typeof body.notepadOpen === "boolean") config.notepadOpen = body.notepadOpen;
+    if (typeof body.notepadFontScale === "number" && isFinite(body.notepadFontScale))
+      config.notepadFontScale = Math.max(0.8, Math.min(2, body.notepadFontScale));
     if (typeof body.miningTone === "string") config.miningTone = body.miningTone;
     // GPU accel is read by electron/main.cjs at startup; persist here, restart applies it.
     if (typeof body.hwAccel === "boolean") config.hwAccel = body.hwAccel;
@@ -1067,6 +1110,22 @@ const server = createServer(async (req, res) => {
     const ok = typeof body.url === "string" ? await setActive(body.url, "manual") : false;
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok, active: config.activeUrl }));
+    return;
+  }
+
+  // Notepad: local-only scratch notes (see overlay/notepad.html). GET reads the list;
+  // POST replaces it with the widget's full array (debounced client-side on edit).
+  if (url === "/api/notes" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    res.end(JSON.stringify({ notes: readNotes() }));
+    return;
+  }
+  if (url === "/api/notes" && req.method === "POST") {
+    const body = await readBody(req);
+    const notes = sanitizeNotes(body?.notes);
+    await saveNotes(notes);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, count: notes.length }));
     return;
   }
 

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notepad</title>
+<script>/* AMD compatibility: apply the lite skin BEFORE first paint (no flash) when the shell asks for it. */
+  if (new URLSearchParams(location.search).has("lite")) document.documentElement.classList.add("amd-lite");
+  /* Apply ?theme= before first paint (no flash). The parent canvas keeps this in sync live (same-origin). */
+  { const q = new URLSearchParams(location.search); const r = document.documentElement;
+    const t = q.get("theme"); if (t) r.setAttribute("data-theme", t); }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Shares the Mission Control stream-overlay design language with the main HUD (missions.html)
+     and the Mining Assistant (mining.html): navy-teal translucent glass, cyan chrome, gold value
+     accents, cyan diamond glyph, Inter labels. The token block below is copied verbatim from those
+     files so every manufacturer theme retints the notepad automatically. */
+  :root {
+    --cyan: #45D0E0; --cyan-bright: #7fe3ef; --cyan-text: #c4dbe6; --cyan-dim: #7fa7bb; --faint: #5d7e90;
+    --gold: #FFD27A; --amber: #F5A623; --green: #2ee6a0; --red: #ff8478;
+    --accent-rgb: 69, 208, 224; --value-rgb: 255, 210, 122;
+    --border: rgba(var(--accent-rgb), 0.38); --divider: rgba(var(--accent-rgb), 0.16); --track: #0c1a26;
+    --panel-top: rgba(13, 27, 40, 0.72); --panel-bot: rgba(8, 17, 26, 0.8); --panel-solid: rgba(8, 17, 26, 0.95);
+    --menu-bg: #0a1822; --scan: rgba(150, 225, 245, 0.06); --sheen: rgba(180, 235, 250, 0.09);
+    --twist: 0deg;
+    --sans: "Inter", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace;
+  }
+  :root[data-theme="drake"] {
+    --cyan: #E4802F; --cyan-bright: #FBB24A; --cyan-text: #E7D6C0; --cyan-dim: #A88A66; --faint: #7A6650;
+    --gold: #FFC24A; --amber: #F6A93A; --green: #57C878; --red: #FF6B4A; --track: #1a1206;
+    --accent-rgb: 228, 128, 47; --value-rgb: 255, 194, 74;
+    --panel-top: rgba(31, 23, 14, 0.82); --panel-bot: rgba(16, 11, 6, 0.88); --panel-solid: rgba(16, 11, 6, 0.96);
+    --menu-bg: #150f08; --scan: rgba(245, 180, 90, 0.05); --sheen: rgba(250, 210, 150, 0.06);
+  }
+  :root[data-theme="anvil"] {
+    --cyan: #26D6AB; --cyan-bright: #5FE8CC; --cyan-text: #C4E7DF; --cyan-dim: #7BB3A8; --faint: #5C8078;
+    --gold: #E7BC52; --amber: #F0A63C; --green: #4FE0A8; --red: #FF7A5E; --track: #0a1a16;
+    --accent-rgb: 38, 214, 171; --value-rgb: 231, 188, 82;
+    --panel-top: rgba(10, 24, 21, 0.80); --panel-bot: rgba(6, 15, 13, 0.86); --panel-solid: rgba(6, 15, 13, 0.96);
+    --menu-bg: #0a1512; --scan: rgba(38, 214, 171, 0.05); --sheen: rgba(120, 235, 205, 0.06);
+  }
+  :root[data-theme="greys"] {
+    --cyan: #83D93E; --cyan-bright: #A6F062; --cyan-text: #DCEFC4; --cyan-dim: #93B36E; --faint: #6C8050;
+    --gold: #EFA23E; --amber: #F0983A; --green: #9BF05A; --red: #FF6B4A; --track: #0d1406;
+    --accent-rgb: 131, 217, 62; --value-rgb: 239, 162, 62;
+    --panel-top: rgba(15, 19, 10, 0.82); --panel-bot: rgba(8, 10, 6, 0.88); --panel-solid: rgba(8, 10, 6, 0.96);
+    --menu-bg: #0b1006; --scan: rgba(131, 217, 62, 0.06); --sheen: rgba(180, 240, 110, 0.06);
+  }
+  :root[data-theme="esperia"] {
+    --cyan: #E8455A; --cyan-bright: #FF7E8C; --cyan-text: #EBC7CD; --cyan-dim: #B67C85; --faint: #7E555C;
+    --gold: #F4B44E; --amber: #F0A03A; --green: #4FE0A8; --red: #FF6B5A; --track: #1c0a0d;
+    --accent-rgb: 232, 69, 90; --value-rgb: 244, 180, 78;
+    --panel-top: rgba(30, 13, 16, 0.82); --panel-bot: rgba(17, 7, 9, 0.88); --panel-solid: rgba(17, 7, 9, 0.96);
+    --menu-bg: #150809; --scan: rgba(232, 69, 90, 0.05); --sheen: rgba(255, 150, 160, 0.06);
+  }
+  :root[data-theme="misc"] {
+    --cyan: #E7B93E; --cyan-bright: #F8D468; --cyan-text: #E6DBC4; --cyan-dim: #A99A6E; --faint: #776E52;
+    --gold: #6FDCEC; --amber: #F0A83C; --green: #57C878; --red: #FF6B4A; --track: #171206;
+    --accent-rgb: 231, 185, 62; --value-rgb: 111, 220, 236;
+    --panel-top: rgba(26, 22, 10, 0.82); --panel-bot: rgba(15, 12, 5, 0.88); --panel-solid: rgba(15, 12, 5, 0.96);
+    --menu-bg: #120e05; --scan: rgba(231, 185, 62, 0.05); --sheen: rgba(255, 225, 150, 0.06);
+  }
+  :root[data-theme="banu"] {
+    --cyan: #F2511E; --cyan-bright: #FF7A4A; --cyan-text: #EFD0C0; --cyan-dim: #B58370; --faint: #855A4A;
+    --gold: #F5CE4E; --amber: #F0A63A; --green: #5FD69A; --red: #FF6B4A; --track: #1c0d06;
+    --accent-rgb: 242, 81, 30; --value-rgb: 245, 206, 78;
+    --panel-top: rgba(30, 14, 8, 0.82); --panel-bot: rgba(18, 8, 4, 0.88); --panel-solid: rgba(18, 8, 4, 0.96);
+    --menu-bg: #160a05; --scan: rgba(242, 81, 30, 0.05); --sheen: rgba(255, 150, 110, 0.06);
+  }
+  :root[data-theme="gatac"] {
+    --cyan: #A47CE8; --cyan-bright: #C4A6F5; --cyan-text: #D8CBEC; --cyan-dim: #9585B0; --faint: #6B5F82;
+    --gold: #F2C85A; --amber: #E8A93C; --green: #4FE0A8; --red: #FF6B6B; --track: #140b1e;
+    --accent-rgb: 164, 124, 232; --value-rgb: 242, 200, 90;
+    --panel-top: rgba(22, 14, 34, 0.80); --panel-bot: rgba(13, 8, 22, 0.86); --panel-solid: rgba(13, 8, 22, 0.96);
+    --menu-bg: #120a1e; --scan: rgba(164, 124, 232, 0.06); --sheen: rgba(200, 170, 245, 0.07);
+  }
+  :root[data-theme="mirai"] {
+    --cyan: #3E9BF2; --cyan-bright: #6FB8FA; --cyan-text: #C4DAF0; --cyan-dim: #7C9DC0; --faint: #566F8C;
+    --gold: #F2B84E; --amber: #F0A63C; --green: #4FE0A8; --red: #FF6B5A; --track: #08131f;
+    --accent-rgb: 62, 155, 242; --value-rgb: 242, 184, 78;
+    --panel-top: rgba(10, 20, 34, 0.80); --panel-bot: rgba(6, 12, 22, 0.86); --panel-solid: rgba(6, 12, 22, 0.96);
+    --menu-bg: #0a1420; --scan: rgba(62, 155, 242, 0.06); --sheen: rgba(150, 200, 250, 0.07);
+  }
+  :root[data-theme="origin"] {
+    --cyan: #5E8AD6; --cyan-bright: #86A9E8; --cyan-text: #CFDAEC; --cyan-dim: #8496B4; --faint: #5B6B85;
+    --gold: #E8C98A; --amber: #EBAE5C; --green: #4FE0A8; --red: #FF5A4E; --track: #0c1220;
+    --accent-rgb: 94, 138, 214; --value-rgb: 232, 201, 138;
+    --panel-top: rgba(14, 18, 32, 0.80); --panel-bot: rgba(8, 11, 20, 0.86); --panel-solid: rgba(8, 11, 20, 0.96);
+    --menu-bg: #0b1020; --scan: rgba(94, 138, 214, 0.05); --sheen: rgba(180, 200, 240, 0.07);
+  }
+  :root[data-theme="aegis"] {
+    --cyan: #5CBBD9; --cyan-bright: #8AD6EE; --cyan-text: #C6DEE8; --cyan-dim: #7EA3B2; --faint: #566E7A;
+    --gold: #EFE077; --amber: #EBCB55; --green: #4FE0A8; --red: #FF5A4E; --track: #0a151a;
+    --accent-rgb: 92, 187, 217; --value-rgb: 239, 224, 119;
+    --panel-top: rgba(12, 22, 28, 0.80); --panel-bot: rgba(7, 13, 17, 0.86); --panel-solid: rgba(7, 13, 17, 0.96);
+    --menu-bg: #091318; --scan: rgba(92, 187, 217, 0.05); --sheen: rgba(160, 220, 240, 0.07);
+  }
+  :root[data-theme="crusader"] {
+    --cyan: #4FA6E4; --cyan-bright: #7EC3F2; --cyan-text: #C6DCEF; --cyan-dim: #7B9DB8; --faint: #556F86;
+    --gold: #F2C766; --amber: #EBAE5C; --green: #4FE0A8; --red: #FF5A4E; --track: #08131f;
+    --accent-rgb: 79, 166, 228; --value-rgb: 242, 199, 102;
+    --panel-top: rgba(11, 19, 30, 0.80); --panel-bot: rgba(6, 11, 19, 0.86); --panel-solid: rgba(6, 11, 19, 0.96);
+    --menu-bg: #0a1220; --scan: rgba(79, 166, 228, 0.05); --sheen: rgba(150, 200, 245, 0.07);
+  }
+  :root[data-theme="rsi"] {
+    --cyan: #8B90E9; --cyan-bright: #AEB2F4; --cyan-text: #D2D5EE; --cyan-dim: #8E92B8; --faint: #5F6389;
+    --gold: #F5983C; --amber: #F0863A; --green: #4FE0A8; --red: #FF6A4A; --track: #0e0f1e;
+    --accent-rgb: 139, 144, 233; --value-rgb: 245, 152, 60;
+    --panel-top: rgba(16, 16, 32, 0.80); --panel-bot: rgba(9, 9, 20, 0.86); --panel-solid: rgba(9, 9, 20, 0.96);
+    --menu-bg: #0c0c1e; --scan: rgba(139, 144, 233, 0.05); --sheen: rgba(180, 182, 245, 0.07);
+  }
+  :root[data-theme="kruger"] {
+    --cyan: #5CDD90; --cyan-bright: #8CEDB1; --cyan-text: #CDE8D6; --cyan-dim: #85B39A; --faint: #5E7E6C;
+    --gold: #F2D06A; --amber: #EBB84E; --green: #6BE6A0; --red: #F0342B; --track: #0a1a10;
+    --accent-rgb: 92, 221, 144; --value-rgb: 242, 208, 106;
+    --panel-top: rgba(12, 26, 18, 0.80); --panel-bot: rgba(6, 15, 10, 0.86); --panel-solid: rgba(6, 15, 10, 0.96);
+    --menu-bg: #08160e; --scan: rgba(92, 221, 144, 0.05); --sheen: rgba(150, 240, 190, 0.07);
+  }
+  :root[data-theme="argo"] {
+    --cyan: #E37B36; --cyan-bright: #F59A54; --cyan-text: #E7D3C0; --cyan-dim: #A88A6E; --faint: #7A6650;
+    --gold: #5EE884; --amber: #4FD97A; --green: #5EE884; --red: #FF6B4A; --track: #1a1206;
+    --accent-rgb: 227, 123, 54; --value-rgb: 94, 232, 132;
+    --panel-top: rgba(28, 20, 10, 0.82); --panel-bot: rgba(16, 11, 5, 0.88); --panel-solid: rgba(16, 11, 5, 0.96);
+    --menu-bg: #140d05; --scan: rgba(227, 123, 54, 0.05); --sheen: rgba(255, 200, 150, 0.06);
+  }
+  :root[data-theme="cnou"] {
+    --cyan: #CFF0F6; --cyan-bright: #EAFBFE; --cyan-text: #DBEEF3; --cyan-dim: #9FBEC7; --faint: #6B8890;
+    --gold: #FFD27A; --amber: #F5C048; --green: #6FE3B0; --red: #FF8478; --track: #0d1a1e;
+    --accent-rgb: 207, 240, 246; --value-rgb: 255, 210, 122;
+    --panel-top: rgba(16, 28, 33, 0.76); --panel-bot: rgba(9, 18, 22, 0.84); --panel-solid: rgba(9, 18, 22, 0.96);
+    --menu-bg: #0a1519; --scan: rgba(207, 240, 246, 0.06); --sheen: rgba(220, 245, 250, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(var(--accent-rgb), 0.28) transparent; }
+  html, body { margin: 0; height: 100%; background: transparent; }
+  body { font-family: var(--sans); color: var(--cyan-text); overflow: hidden; }
+
+  /* Standalone / browser-source: a centered fixed-size card. Embedded (?embedded=1) the widget
+     shell owns the box, so the panel fills the iframe 100%. */
+  #panel {
+    display: flex; flex-direction: column;
+    width: 320px; height: 380px; margin: 20px auto;
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: linear-gradient(180deg, var(--panel-top), var(--panel-bot));
+    -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(var(--accent-rgb), 0.05);
+    position: relative;
+  }
+  html.amd-lite #panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: var(--panel-solid) !important; }
+  /* Faint CRT scanlines + visor sheen, matching the HUD (decorative, non-interactive). */
+  #panel::before { content: ""; position: absolute; inset: 0; border-radius: 12px; pointer-events: none; z-index: 3;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, var(--scan) 2px 3px); opacity: 0.5; }
+  html.amd-lite #panel::before { display: none; }
+  body.embedded { overflow: visible; background: transparent; }
+  body.embedded #panel { width: 100%; height: 100%; margin: 0; }
+
+  /* Header rows — one for the list, one for the editor (toggled by #panel.editing). */
+  .head { flex: none; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+    border-bottom: 1px solid var(--divider); position: relative; z-index: 4; min-height: 40px; }
+  #panel:not(.editing) .edit-only { display: none; }
+  #panel.editing .list-only { display: none; }
+  #panel:not(.editing) #editView { display: none; }
+  #panel.editing #listView { display: none; }
+  .dia { width: 7px; height: 7px; flex: none; background: var(--cyan-bright); transform: rotate(45deg);
+    box-shadow: 0 0 8px var(--cyan); }
+  .h-title { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--cyan-text); flex: 1; }
+  .hbtn { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--cyan-bright); background: rgba(var(--accent-rgb), 0.14); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  .hbtn:hover { background: rgba(var(--accent-rgb), 0.24); border-color: var(--cyan); }
+  .hbtn.ghost { background: transparent; border-color: transparent; padding-left: 2px; }
+  .hbtn.ghost:hover { background: rgba(var(--accent-rgb), 0.12); }
+  .hbtn.active { background: rgba(var(--accent-rgb), 0.28); border-color: var(--cyan); color: var(--cyan-bright); }
+  .hbtn.danger { color: var(--red); border-color: rgba(255, 132, 120, 0.4); background: rgba(255, 132, 120, 0.08); }
+  .hbtn.danger:hover { background: rgba(255, 132, 120, 0.18); border-color: var(--red); }
+  .saved { flex: 1; font-family: var(--sans); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--faint); opacity: 0; transition: opacity 0.2s; text-align: right; padding-right: 8px; }
+  .saved.show { opacity: 1; color: var(--green); }
+  .saved.saving { opacity: 1; color: var(--faint); }
+
+  /* Text-size stepper (list header) — scales the note CONTENT (list + editor) via zoom, leaving
+     the chrome/buttons fixed, so notes stay readable from 1080p to 4K. */
+  .fsz { display: flex; gap: 3px; margin-right: 2px; }
+  .fsbtn { font-family: var(--sans); font-weight: 700; font-size: 11px; line-height: 1; color: var(--cyan-text);
+    background: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--divider); border-radius: 5px;
+    width: 24px; height: 24px; cursor: pointer; padding: 0; }
+  .fsbtn:hover { background: rgba(var(--accent-rgb), 0.22); border-color: var(--cyan); color: var(--cyan-bright); }
+  .fsbtn:disabled { opacity: 0.4; cursor: default; }
+
+  /* List view. Content is zoomed by --fs (text-size stepper); chrome stays fixed. */
+  #listView { flex: 1; overflow-y: auto; overflow-x: hidden; zoom: var(--fs, 1); }
+  .note-item { display: block; width: 100%; text-align: left; cursor: pointer;
+    padding: 10px 12px; border: 0; border-bottom: 1px solid rgba(var(--accent-rgb), 0.08);
+    background: transparent; color: var(--cyan-text); font-family: var(--sans); }
+  .note-item:hover { background: rgba(var(--accent-rgb), 0.09); }
+  .note-item .ni-title { font-size: 12.5px; font-weight: 600; color: var(--cyan-bright);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note-item .ni-title.untitled { color: var(--faint); font-style: italic; font-weight: 500; }
+  .note-item .ni-prev { font-size: 11px; color: var(--cyan-dim); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note-item .ni-time { font-size: 9.5px; color: var(--faint); margin-top: 3px; letter-spacing: 0.04em;
+    font-family: var(--mono); }
+  .empty { padding: 28px 16px; text-align: center; color: var(--faint); font-size: 12px; line-height: 1.7; }
+
+  /* Editor view. */
+  #editView { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 10px 12px 12px; zoom: var(--fs, 1); }
+  #noteTitle { flex: none; font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--cyan-bright);
+    background: transparent; border: 0; border-bottom: 1px solid var(--divider); padding: 4px 2px 8px;
+    outline: none; }
+  #noteTitle::placeholder { color: var(--faint); font-weight: 500; }
+  #noteBody { flex: 1; min-height: 0; margin-top: 10px; resize: none; font-family: var(--sans); font-size: 12.5px;
+    line-height: 1.6; color: var(--cyan-text); background: transparent; border: 0; outline: none; }
+  #noteBody::placeholder { color: var(--faint); }
+</style>
+</head>
+<body>
+  <div id="panel">
+    <div class="head list-only">
+      <span class="dia"></span>
+      <span class="h-title">Notepad</span>
+      <div class="fsz">
+        <button id="fsDown" class="fsbtn" type="button" title="Smaller text">A−</button>
+        <button id="fsUp" class="fsbtn" type="button" title="Larger text">A+</button>
+      </div>
+      <button id="newBtn" class="hbtn" type="button">＋ New</button>
+    </div>
+    <div class="head edit-only">
+      <button id="backBtn" class="hbtn ghost" type="button">‹ Notes</button>
+      <button id="typeBtn" class="hbtn" type="button" title="Typing mode: grab keyboard focus + free up the interact key so you can type in-game">✎ Type</button>
+      <span id="savedTag" class="saved">Saved ✓</span>
+      <button id="delBtn" class="hbtn danger" type="button" title="Delete this note">🗑</button>
+    </div>
+
+    <div id="listView">
+      <div id="noteList"></div>
+      <div id="emptyState" class="empty">No notes yet.<br>Tap <b>＋ New</b> to start one.</div>
+    </div>
+
+    <div id="editView">
+      <input id="noteTitle" type="text" placeholder="Title" maxlength="200" spellcheck="false" />
+      <textarea id="noteBody" placeholder="Write your note…" maxlength="20000" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const EMBEDDED = new URLSearchParams(location.search).has("embedded");
+  if (EMBEDDED) document.body.classList.add("embedded");
+  // Same-origin bridge to the parent canvas (present only when embedded on the overlay).
+  const host = () => (EMBEDDED && window.parent) ? window.parent.__notepadHost : null;
+
+  let notes = [];        // [{ id, title, body, createdAt, updatedAt }]
+  let editingId = null;  // id of the note open in the editor, or null (list view)
+  let saveTimer = null;
+
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+  const byNewest = (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0);
+  const cur = () => notes.find((n) => n.id === editingId) || null;
+
+  function fmtWhen(ts) {
+    if (!ts) return "";
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return "";
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (sameDay) return time;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" }) + " · " + time;
+  }
+
+  // ── persistence ─────────────────────────────────────────────────────────────
+  async function loadNotes() {
+    try {
+      const r = await fetch("/api/notes", { cache: "no-store" });
+      const data = await r.json();
+      notes = Array.isArray(data.notes) ? data.notes : [];
+    } catch { notes = []; }
+    renderList();
+  }
+  async function saveNow() {
+    setSaved("saving");
+    try {
+      await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      setSaved("saved");
+    } catch { setSaved(""); }
+  }
+  function scheduleSave() {
+    setSaved("saving");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 500);
+  }
+  function setSaved(state) {
+    const t = $("savedTag");
+    t.classList.toggle("saving", state === "saving");
+    t.classList.toggle("show", state === "saved");
+    t.textContent = state === "saving" ? "Saving…" : "Saved ✓";
+    if (state === "saved") { clearTimeout(setSaved._t); setSaved._t = setTimeout(() => t.classList.remove("show"), 1500); }
+  }
+
+  // ── list view ────────────────────────────────────────────────────────────────
+  function renderList() {
+    const list = $("noteList");
+    list.textContent = "";
+    const sorted = notes.slice().sort(byNewest);
+    $("emptyState").style.display = sorted.length ? "none" : "block";
+    for (const n of sorted) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "note-item";
+      const title = document.createElement("div");
+      title.className = "ni-title" + (n.title.trim() ? "" : " untitled");
+      title.textContent = n.title.trim() || "Untitled note";
+      const prev = document.createElement("div");
+      prev.className = "ni-prev";
+      prev.textContent = n.body.trim().replace(/\s+/g, " ") || "No content";
+      const time = document.createElement("div");
+      time.className = "ni-time";
+      time.textContent = fmtWhen(n.updatedAt);
+      item.append(title, prev, time);
+      item.addEventListener("click", () => openNote(n.id));
+      list.appendChild(item);
+    }
+  }
+
+  // ── editor view ───────────────────────────────────────────────────────────────
+  function openNote(id) {
+    editingId = id;
+    const n = cur();
+    if (!n) return;
+    $("noteTitle").value = n.title;
+    $("noteBody").value = n.body;
+    $("panel").classList.add("editing");
+    $("savedTag").classList.remove("show", "saving");
+    setTyping(false); // open in read mode; the "Type" button grabs focus when the user wants to write
+  }
+  function newNote() {
+    const now = Date.now();
+    const n = { id: newId(), title: "", body: "", createdAt: now, updatedAt: now };
+    notes.push(n);
+    openNote(n.id);
+  }
+  function backToList() {
+    if (typing) setTyping(false); // release the overlay's keyboard grab
+    const n = cur();
+    // Drop a note left completely empty so the list doesn't fill with blanks.
+    if (n && !n.title.trim() && !n.body.trim()) {
+      notes = notes.filter((x) => x.id !== n.id);
+      saveNow();
+    }
+    editingId = null;
+    $("panel").classList.remove("editing");
+    renderList();
+  }
+  function deleteNote() {
+    if (!editingId) return;
+    if (typing) setTyping(false);
+    notes = notes.filter((n) => n.id !== editingId);
+    editingId = null;
+    $("panel").classList.remove("editing");
+    renderList();
+    saveNow();
+  }
+  // Typing mode: the overlay grabs keyboard focus + suspends the interact key so you can type
+  // in-game without alt-tabbing (and so the interact key, e.g. F, types as a letter). The note
+  // field is focused by the parent via __notepadFocus once the interact key is released (no stray
+  // characters). Standalone (no overlay host) just focuses the field directly.
+  let typing = false;
+  function setTyping(on) {
+    typing = !!on;
+    const b = $("typeBtn");
+    b.textContent = typing ? "✓ Done" : "✎ Type";
+    b.classList.toggle("active", typing);
+    if (typing) {
+      if (host()) host().editStart(); // parent grabs focus + suspends interact, then calls __notepadFocus
+      else $("noteBody").focus();     // standalone / already-focused window
+    } else {
+      if (host()) host().editEnd();
+      const a = document.activeElement; if (a && a.blur) a.blur();
+    }
+  }
+  // Called by the overlay parent once it's safe to focus (the held interact key has been released).
+  window.__notepadFocus = () => { if (typing) $("noteBody").focus(); };
+  // Called by the parent when the widget is hidden — leave typing mode so its state can't linger.
+  window.__notepadExitTyping = () => { if (typing) setTyping(false); };
+  function onEdit() {
+    const n = cur();
+    if (!n) return;
+    n.title = $("noteTitle").value;
+    n.body = $("noteBody").value;
+    n.updatedAt = Date.now();
+    scheduleSave();
+  }
+
+  $("newBtn").addEventListener("click", newNote);
+  $("backBtn").addEventListener("click", backToList);
+  $("delBtn").addEventListener("click", deleteNote);
+  $("typeBtn").addEventListener("click", () => setTyping(!typing));
+  $("noteTitle").addEventListener("input", onEdit);
+  $("noteBody").addEventListener("input", onEdit);
+  // Esc leaves typing mode (releases the overlay's keyboard grab, back to click-through).
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && typing) { e.preventDefault(); setTyping(false); } });
+
+  // Any interaction summons the parent's global cog (settings/arrange reachable), matching mining.
+  document.addEventListener("pointerdown", () => { try { host()?.summonCog?.(); } catch { /* not embedded */ } });
+
+  // ── Text size ─────────────────────────────────────────────────────────────────
+  // Scales the note CONTENT (list + editor) via the --fs zoom var so notes stay readable from
+  // 1080p to 4K; the chrome/buttons stay a fixed size. Persisted in config (survives restarts).
+  let fontScale = 1;
+  let fsSaveTimer = null;
+  function applyFontScale() {
+    $("panel").style.setProperty("--fs", fontScale);
+    $("fsDown").disabled = fontScale <= 0.8001;
+    $("fsUp").disabled = fontScale >= 1.9999;
+  }
+  function bumpFontScale(delta) {
+    fontScale = Math.max(0.8, Math.min(2, Math.round((fontScale + delta) * 10) / 10));
+    applyFontScale();
+    clearTimeout(fsSaveTimer);
+    fsSaveTimer = setTimeout(() => {
+      fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notepadFontScale: fontScale }) }).catch(() => { /* best-effort */ });
+    }, 400);
+  }
+  async function loadFontScale() {
+    try {
+      const c = await (await fetch("/api/config", { cache: "no-store" })).json();
+      if (typeof c.notepadFontScale === "number" && isFinite(c.notepadFontScale)) fontScale = Math.max(0.8, Math.min(2, c.notepadFontScale));
+    } catch { /* keep default */ }
+    applyFontScale();
+  }
+  $("fsDown").addEventListener("click", () => bumpFontScale(-0.1));
+  $("fsUp").addEventListener("click", () => bumpFontScale(0.1));
+
+  loadNotes();
+  loadFontScale();
+  try { host()?.ready?.(); } catch { /* not embedded */ }
+</script>
+</body>
+</html>

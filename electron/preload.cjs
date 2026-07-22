@@ -35,6 +35,13 @@ contextBridge.exposeInMainWorld("overlayApi", {
   // Global overlay-app chrome (the in-overlay hub): toggle the other widgets on/off, read
   // their current visibility, enter/leave global arrange, and open the full settings window.
   setMining: (on) => ipcRenderer.send("app:set-mining", !!on),
+  setNotepad: (on) => ipcRenderer.send("app:set-notepad", !!on),
+  onNotepadVisible: (cb) => ipcRenderer.on("overlay:notepad-visible", (_e, s) => cb(s)),
+  // Notepad typing mode: the overlay grabs keyboard focus + suspends the interact key so the
+  // note field can be typed into over a focused game. onNotepadFocus fires once it's safe to
+  // focus the field (the held interact key was released) so no stray character lands.
+  notepadEditing: (on) => ipcRenderer.send("overlay:notepad-editing", !!on),
+  onNotepadFocus: (cb) => ipcRenderer.on("overlay:notepad-focus", () => cb()),
   widgetStates: () => ipcRenderer.invoke("app:widget-states"),
   onWidgetStates: (cb) => ipcRenderer.on("overlay:widget-states", (_e, s) => cb(s)),
   arrange: (on) => ipcRenderer.send(on ? "overlay:begin-move" : "overlay:end-move"),

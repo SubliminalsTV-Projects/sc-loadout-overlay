@@ -99,6 +99,8 @@ let tray = null;
 let hovering = false; // pointer is over the HUD (reported by the page)
 let holdInteract = false; // true only while the interact-hold hotkey (default F) is held down
 let holdMode = false; // opt-in: when true, interaction REQUIRES holding the interact key (default off)
+let notepadEditing = false; // notepad "typing mode": overlay holds keyboard focus + the interact key is suspended so it types as a letter
+let notepadFocusPending = false; // defer focusing the note field until a held interact key is released (avoids a stray character)
 let moveMode = false; // arrange mode: show the drag banner/handles (VISUAL only — interactivity stays hover-based)
 let modalOpen = false; // a HUD modal (what's-new card / hub) is up — stay hover-interactive even if locked
 let dragging = false; // an active drag/resize gesture on THIS window — force it interactive so it can't drop
@@ -107,6 +109,7 @@ let dragging = false; // an active drag/resize gesture on THIS window — force 
 // one source of truth) and drives it into the overlay renderer; the renderer owns the DOM +
 // per-widget layout, drag, and cursor hit-testing (one window → no cross-window z-order bugs).
 let miningVisible = false; // is the in-canvas mining widget currently shown
+let notepadVisible = false; // is the in-canvas notepad widget currently shown
 let miningArm = false;      // load the mining iframe hidden at startup (auto-show waiting to pop)
 let miningAutoSuppress = 0; // auto-show is suppressed until this timestamp (set on a manual hide)
 let overlayEnabled = true; // master switch — false = HUD window destroyed, tracking still runs
@@ -219,6 +222,7 @@ function createOverlay() {
   overlay.webContents.on("did-finish-load", () => {
     try { overlay.setBounds(bounds); } catch { /* re-assert the full span past any creation-time clamp */ }
     sendMiningVisible(miningVisible ? { on: true } : { on: false, arm: miningArm });
+    sendNotepadVisible({ on: notepadVisible });
     pushWidgetStates();
   });
   applyMouse();
@@ -279,7 +283,10 @@ function applyMouse() {
   // Default: clickable whenever the cursor is over a widget. Opt-in "hold to interact" mode
   // (holdMode) makes it passive UNLESS the interact key (default F) is held — so gameplay never
   // accidentally clicks it. Either way, dragging/modal force it interactive.
-  const canHover = holdMode ? holdInteract : true;
+  // While editing a note, the notepad widget stays clickable without holding the interact key
+  // (so you can reach Done / the fields), but the rest of the canvas stays click-through so the
+  // game still gets clicks outside it — hence canHover, not a whole-window force.
+  const canHover = holdMode ? (holdInteract || notepadEditing) : true;
   const interactive = dragging || modalOpen || (hovering && canHover);
   overlay.setIgnoreMouseEvents(!interactive);
 }
@@ -354,11 +361,29 @@ function sendMiningVisible(state) {
   try { if (overlay && !overlay.isDestroyed()) overlay.webContents.send("overlay:mining-visible", state); }
   catch { /* renderer gone */ }
 }
-// Push the mining widget's on/off state to the in-overlay hub checkbox (kept in sync with tray).
+// Push widget on/off state to the in-overlay hub checkboxes (kept in sync with the tray).
 function pushWidgetStates() {
-  try { if (overlay && !overlay.isDestroyed()) overlay.webContents.send("overlay:widget-states", { mining: miningVisible }); }
+  try { if (overlay && !overlay.isDestroyed()) overlay.webContents.send("overlay:widget-states", { mining: miningVisible, notepad: notepadVisible }); }
   catch { /* renderer gone */ }
 }
+// The Notepad widget is a plain in-canvas iframe (no auto-show / SSE), so its visibility is a
+// simple shell-owned flag pushed to the renderer — mirrors setMiningVisible, minus the arm/suppress.
+function sendNotepadVisible(state) {
+  try { if (overlay && !overlay.isDestroyed()) overlay.webContents.send("overlay:notepad-visible", state); }
+  catch { /* renderer gone */ }
+}
+function setNotepadVisible(on) {
+  notepadVisible = !!on;
+  // Hiding the notepad while typing mode is still active would strand notepadEditing=true, which
+  // suspends the interact key (so hold-F would stop summoning the cog / interacting). Always clear
+  // it on hide so the widget's edit state can't leak into global interaction.
+  if (!notepadVisible && notepadEditing) { notepadEditing = false; notepadFocusPending = false; applyMouse(); }
+  sendNotepadVisible({ on: notepadVisible });
+  postConfig({ notepadOpen: notepadVisible }); // remember open/closed for next launch
+  pushWidgetStates();
+  refreshTray();
+}
+function toggleNotepad() { setNotepadVisible(!notepadVisible); }
 function setMiningVisible(on, opts) {
   opts = opts || {};
   on = !!on;
@@ -426,8 +451,15 @@ function registerInteractHotkey(accel) {
   const r = hotkeys.registerHold(accel,
     // On press (only matters in opt-in hold mode): allow interaction AND summon the global cog so
     // settings are reachable while held. In the default hover mode this key does nothing.
-    () => { if (!holdMode) return; holdInteract = true; applyMouse(); try { overlay && !overlay.isDestroyed() && overlay.webContents.send("overlay:summon-cog"); } catch { /* ignore */ } },
-    () => { if (!holdInteract) return; holdInteract = false; applyMouse(); });
+    // Down: normal hold-to-interact — BUT while typing a note the interact key is suspended, so it
+    // types as a plain character (e.g. "F") instead of toggling interaction.
+    () => { if (!holdMode || notepadEditing) return; holdInteract = true; applyMouse(); try { overlay && !overlay.isDestroyed() && overlay.webContents.send("overlay:summon-cog"); } catch { /* ignore */ } },
+    // Up: end the hold; and if a note is waiting to be focused (the key was held to click "Type"),
+    // focus it NOW that the key is released so no stray character lands in the field.
+    () => {
+      if (holdInteract) { holdInteract = false; applyMouse(); }
+      if (notepadFocusPending) { notepadFocusPending = false; try { overlay && !overlay.isDestroyed() && overlay.webContents.send("overlay:notepad-focus"); } catch { /* ignore */ } }
+    });
   if (r.ok) interactAccel = accel;
   return r;
 }
@@ -722,6 +754,7 @@ function refreshTray() {
         : [{ label: "Overlay off — tracking still running", enabled: false }]),
       { type: "separator" },
       { label: "Mining Assistant", click: toggleMining },
+      { label: "Notepad", type: "checkbox", checked: notepadVisible, click: toggleNotepad },
       {
         label: "Binding chart overlay",
         type: "checkbox",
@@ -825,6 +858,7 @@ if (!app.requestSingleInstanceLock()) {
       const c = JSON.parse(fs.readFileSync(p, "utf8"));
       miningVisible = c.miningOpen === true;
       miningArm = !miningVisible && c.miningAutoShow === true;
+      notepadVisible = c.notepadOpen === true;
     } catch { /* default off */ }
     // Opt-in fabricator screen-capture loop (config.fabCapture). No-op until enabled.
     startFabCapture({
@@ -927,6 +961,22 @@ if (!app.requestSingleInstanceLock()) {
     modalOpen = !!on;
     applyMouse();
   });
+  // Notepad "typing mode" on/off. ON: bring the overlay foreground so the note field gets the
+  // keyboard (no alt-tab), keep the notepad clickable without holding the interact key, and
+  // suspend the interact key so it types as a letter. The field is focused only once a held
+  // interact key is released (deferred here) so clicking "Type" while holding it drops no stray
+  // character. OFF: back to normal click-through / hold-to-interact.
+  ipcMain.on("overlay:notepad-editing", (_e, on) => {
+    notepadEditing = !!on;
+    applyMouse();
+    if (notepadEditing) {
+      if (overlay && !overlay.isDestroyed()) overlay.focus(); // foreground for keyboard input
+      if (holdInteract) notepadFocusPending = true; // wait for the interact key to come up
+      else { try { overlay && !overlay.isDestroyed() && overlay.webContents.send("overlay:notepad-focus"); } catch { /* ignore */ } }
+    } else {
+      notepadFocusPending = false;
+    }
+  });
   // An active drag/resize gesture on the HUD widget → force this window interactive for the
   // gesture so a fast pointer can't slip off the widget and drop the drag (the window is
   // otherwise click-through except over the widget, so the stacked mining canvas isn't blocked).
@@ -955,11 +1005,12 @@ if (!app.requestSingleInstanceLock()) {
   // Binding chart is hotkey-only (never kept on). Both widgets now live in the one overlay
   // renderer, so mining is a shell-owned visibility flag (setMiningVisible) rather than a window.
   // (sendMiningVisible / pushWidgetStates / setMiningVisible are defined at module scope above.)
-  ipcMain.handle("app:widget-states", () => ({ mining: miningVisible }));
+  ipcMain.handle("app:widget-states", () => ({ mining: miningVisible, notepad: notepadVisible }));
   ipcMain.on("app:set-mining", (_e, on) => {
     if (on) { miningAutoSuppress = 0; setMiningVisible(true); }
     else setMiningVisible(false, { manual: true });
   });
+  ipcMain.on("app:set-notepad", (_e, on) => setNotepadVisible(!!on));
 
   // Tray app — keep running when the overlay window is closed.
   app.on("window-all-closed", (e) => {
