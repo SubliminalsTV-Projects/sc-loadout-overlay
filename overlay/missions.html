@@ -787,7 +787,11 @@
   #whatsnew .wn-x { flex: none; width: 21px; height: 21px; display: grid; place-items: center; cursor: pointer;
     border: 1px solid var(--divider); border-radius: 4px; color: var(--cyan-dim); font-size: 12px; background: rgba(var(--accent-rgb), 0.06); }
   #whatsnew .wn-x:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(var(--accent-rgb), 0.16); }
-  #whatsnew ul { list-style: none; margin: 9px 0 0; padding: 0; }
+  #whatsnew .wn-group { margin-top: 12px; }
+  #whatsnew .wn-group:first-child { margin-top: 3px; }
+  #whatsnew .wn-gver { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--gold); padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+  #whatsnew ul { list-style: none; margin: 7px 0 0; padding: 0; }
   #whatsnew li { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; line-height: 1.4; color: var(--cyan-text); }
   #whatsnew li::before { content: "◆"; color: var(--cyan); font-size: 7px; flex: none; transform: translateY(4px); }
   #whatsnew .wn-foot { display: flex; align-items: center; gap: 10px; margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--border); }
@@ -979,7 +983,7 @@
         <span class="wn-ver" id="wnVer"></span>
         <span class="wn-x" id="wnX" title="Close">✕</span>
       </div>
-      <ul id="wnList"></ul>
+      <div id="wnList"></div>
       <div class="wn-foot">
         <label class="wn-dismiss"><input type="checkbox" id="wnDontShow" checked /> Don't show this again</label>
         <button class="wn-close" id="wnCloseBtn">Got it</button>
@@ -1812,7 +1816,7 @@
       if (widget.visible === false) { bpHidden = true; document.body.classList.add("bp-hidden"); } // restore hidden state
       if (q.has("arrange")) { $("panel").classList.add("moving"); document.body.classList.add("arranging"); } // headless-test the arrange chrome
       if (q.has("cogopen")) { $("cogMenu").classList.add("open"); $("cog").classList.add("open"); } // headless-test the widget cog
-      if (q.has("whatsnew")) { $("wnVer").textContent = "v0.1.27"; $("wnList").innerHTML = "<li>Sample patch note one</li><li>Sample patch note two</li>"; $("whatsnew").classList.add("show"); } // headless-test the patch-notes modal
+      if (q.has("whatsnew")) { $("wnVer").textContent = "v0.1.31"; $("wnList").innerHTML = '<div class="wn-group"><div class="wn-gver">v0.1.31</div><ul><li>Newest note one</li><li>Newest note two</li></ul></div><div class="wn-group"><div class="wn-gver">v0.1.30</div><ul><li>Older note</li></ul></div>'; $("whatsnew").classList.add("show"); } // headless-test the patch-notes modal
       if (q.has("cog")) $("globalCog").classList.add("show"); // headless-test the summoned cog
       if (q.has("hub")) { $("globalCog").classList.add("show", "open"); $("hub").classList.add("open"); } // headless-test the hub
     })();
@@ -1940,10 +1944,16 @@
         const version = await window.overlayApi.getVersion?.();
         if (!version) return;
         const data = await (await fetch("/api/changelog?v=" + encodeURIComponent(version))).json();
-        if (data.seen || !Array.isArray(data.notes) || !data.notes.length) return;
+        const entries = (Array.isArray(data.entries) ? data.entries : []).filter((e) => Array.isArray(e.notes) && e.notes.length);
+        if (data.seen || !entries.length) return;
         const card = $("whatsnew");
-        $("wnVer").textContent = "v" + version;
-        $("wnList").innerHTML = data.notes.map((n) => "<li>" + escapeHtml(n) + "</li>").join("");
+        // Header chip = newest version; body groups the last few versions so a returning user
+        // sees everything they missed across our fast patches, not just the latest.
+        $("wnVer").textContent = "v" + (entries[0].version || version);
+        $("wnList").innerHTML = entries.map((e) =>
+          '<div class="wn-group"><div class="wn-gver">v' + escapeHtml(e.version) + '</div><ul>' +
+          e.notes.map((n) => "<li>" + escapeHtml(n) + "</li>").join("") + "</ul></div>"
+        ).join("");
         card.classList.add("show");
         window.overlayApi.setModal?.(true);
         let wnLeaveT;
@@ -2065,10 +2075,27 @@
     if (s.state === "mission") {
       if (s.title) showOcrToast("🎯 " + s.title);
     } else if (s.state === "captured") {
-      OCR.fabNote = ""; OCR.fabWarn = false;   // a capture went through — clear the kiosk note
-      if (s.name) showOcrToast("📸 " + s.name + (s.uploaded ? " · shared" : " · saved"));
+      // Report the TRUTH, and keep it on the bar (sticky) instead of snapping back to a generic
+      // "Reading…" that looks idle. uploaded = confirmed on the site; queued = saved + retrying.
+      const nm = s.name || "item";
+      if (s.uploaded) {
+        OCR.fabNote = "✓ shared " + nm; OCR.fabWarn = false;
+        showOcrToast("📸 " + nm + " · shared to site");
+      } else if (s.queued) {
+        OCR.fabNote = "⚠ upload failed — retrying " + nm; OCR.fabWarn = true;
+        showOcrToast("⚠ " + nm + " · captured, upload failed — retrying");
+      } else {
+        OCR.fabNote = "captured " + nm + " (turn on Sync to share)"; OCR.fabWarn = false;
+        showOcrToast("📸 " + nm + " · saved locally (Sync off)");
+      }
+    } else if (s.state === "shared") {
+      // A previously-failed upload finally landed (the retry loop drained it) — confirm to the user.
+      const snm = s.name || "item";
+      OCR.fabNote = "✓ shared " + snm; OCR.fabWarn = false;
+      showOcrToast("✓ " + snm + " shared to site" + (s.pending ? " (" + s.pending + " still uploading)" : ""));
     } else if (s.state === "settling") {
-      OCR.fabNote = ""; OCR.fabWarn = false;   // a fresh item is being captured
+      // Name what it's reading immediately, so it never just sits on a generic "Reading…".
+      OCR.fabNote = "reading " + (s.name || "item") + "…"; OCR.fabWarn = false;
     } else if (s.state === "have") {
       // Recognized the item, but its image is already on the site — nothing to capture. Name it
       // (the strip truncates with an ellipsis when the name is long).

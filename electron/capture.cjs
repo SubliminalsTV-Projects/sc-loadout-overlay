@@ -128,16 +128,22 @@ function readConfig(configDir) {
 
 /** Start the opt-in capture loop. `configDir` = the %APPDATA%/sc-blueprint-tracker dir.
  *  `onStatus(s)` (optional) reports OCR activity to the overlay: {state} for
- *  off/idle/watching/settling, {state:"mission",title}, {state:"captured",name,uploaded},
- *  {state:"have",name} (recognized, but the site already has the image — skipped),
- *  {state:"render",name,stuck} (recognized, waiting for the 3D render — stuck:true once it's
- *  clear the render won't load, e.g. quantum drives / ship components that show no lit model), or
- *  {state:"unresolved",nameRaw} (in the kiosk but the item couldn't be identified). */
+ *  off/idle/watching/settling, {state:"mission",title},
+ *  {state:"captured",name,uploaded,queued} (uploaded:true = confirmed on the site; queued:true =
+ *  saved locally + retrying, NOT done yet), {state:"shared",name,pending} (a queued upload finally
+ *  landed on the site), {state:"have",name} (recognized, but the site already has the image —
+ *  skipped), {state:"render",name,stuck} (recognized, waiting for the 3D render — stuck:true once
+ *  it's clear the render won't load, e.g. quantum drives / ship components that show no lit model),
+ *  or {state:"unresolved",nameRaw} (in the kiosk but the item couldn't be identified). */
 function startFabCapture({ port, configDir, onStatus }) {
   const captureDir = path.join(configDir, "fab-captures");
   const shotsDir = path.join(configDir, "fab-shots"); // full uncropped frames (mineable)
   const tmpShot = path.join(os.tmpdir(), "sc-fab-shot.png");
   let busy = false;
+  let busyAt = 0;             // when the current tick set busy (watchdog against a wedged loop)
+  const TICK_WATCHDOG_MS = 15000; // if a tick has "held" busy this long, it hung — force re-arm
+  const FETCH_TIMEOUT_MS = 8000;  // any single request must give up so it can't latch the loop
+  const DRAIN_MS = 6000;          // how often the retry-upload loop drains captured-but-unshared items
   let lastContext = "";
   // Context = the steady on-screen state (off/idle/watching/fabricator); reported only on change,
   // drives the overlay diamond (fabricator -> gold). Events (settling/captured/mission) are discrete
@@ -153,6 +159,10 @@ function startFabCapture({ port, configDir, onStatus }) {
   let renderStuck = false;    // we've already told the user this item's render won't load
   let pendingItem = null;     // item seen last tick, awaiting a settle poll before capture
   const uploaded = new Set(); // items pushed to the site this session
+  const pendingUploads = new Map(); // item UUID -> display name|null: captured locally but NOT yet
+  //                                   confirmed on the site; the drain loop retries until it lands
+  let drainBusy = false;      // guard for the independent upload-drain loop
+  let seededPending = false;  // have we reconciled the local capture folder vs the site's have-list?
   let remoteHave = null;      // set of items the site already has (dedup)
   let remoteHaveAt = 0;       // when remoteHave was last fetched
   const REMOTE_TTL_MS = 3 * 60_000; // re-fetch the site's have-list this often
@@ -162,7 +172,7 @@ function startFabCapture({ port, configDir, onStatus }) {
   async function ensureRemoteHave() {
     if (remoteHave && Date.now() - remoteHaveAt < REMOTE_TTL_MS) return remoteHave;
     try {
-      const r = await fetch(`${SITE}/api/sc/fab-needed`);
+      const r = await fetch(`${SITE}/api/sc/fab-needed`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       const j = await r.json();
       remoteHave = new Set(Array.isArray(j.have) ? j.have : []);
       remoteHaveAt = Date.now();
@@ -178,6 +188,7 @@ function startFabCapture({ port, configDir, onStatus }) {
         method: "POST",
         headers: { "Content-Type": "image/jpeg", Authorization: `Bearer ${token}` },
         body: jpeg,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (r.ok) { uploaded.add(item); remoteHave?.add(item); return true; }
       console.error(`[fab-capture] upload ${item} -> HTTP ${r.status}`);
@@ -195,10 +206,19 @@ function startFabCapture({ port, configDir, onStatus }) {
     // refinery/mineable reads are routed to its tracker server-side in /api/screen-read.
     const mining = cfg.miningAssistant === true;
     if (!fab && !miss && !mining) { emitContext("off"); return; }
-    if (busy) return;
+    // Watchdog: a single hung await (e.g. a fetch to the sidecar while it's restarting during an
+    // auto-update) must never latch the loop forever. If a prior tick has held `busy` well past
+    // any real tick, treat it as wedged and re-arm — otherwise the overlay freezes on its last
+    // message ("Reading the fabricator…") until the app restarts.
+    if (busy) {
+      if (Date.now() - busyAt < TICK_WATCHDOG_MS) return;
+      console.warn("[fab-capture] tick watchdog: a prior tick hung — re-arming the loop");
+      busy = false;
+    }
     const proc = await foregroundProcess();
     if (!/^StarCitizen$/i.test(proc)) { emitContext("idle"); return; } // only ever look at SC
     busy = true;
+    busyAt = Date.now();
     try {
       const have = fab ? await ensureRemoteHave() : null; // dedup set only needed for capture
       const shot = await captureScreen();
@@ -208,6 +228,7 @@ function startFabCapture({ port, configDir, onStatus }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: tmpShot }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       const read = await resp.json();
       // A kiosk on screen -> "fabricator" context (gold diamond) even if image capture is off;
@@ -267,13 +288,18 @@ function startFabCapture({ port, configDir, onStatus }) {
         if (cfg.syncToken) {
           // Share the one capture across every sibling that still lacks it (name collision).
           const oks = await Promise.all(missing.map((t) => upload(t, jpeg, cfg.syncToken)));
-          uploadedOk = oks.some(Boolean);
+          uploadedOk = oks.every(Boolean);
+          // Any sibling whose upload didn't land: keep the local JPEG and QUEUE it. The drain loop
+          // retries from disk until the server has it, so a transient failure (or a wedge) can't
+          // leave a captured item silently unshared — and the user isn't told "done" when it isn't.
+          missing.forEach((t, i) => { if (!oks[i]) pendingUploads.set(t, read.name); });
           const label = missing.length > 1 ? `${read.name} (${missing.length} sizes)` : `${read.name} (${item})`;
-          console.log(`[fab-capture] ${uploadedOk ? "uploaded" : "saved (upload failed)"} ${label}`);
+          console.log(`[fab-capture] ${uploadedOk ? "uploaded" : "upload failed — queued for retry"} ${label}`);
         } else {
           console.log(`[fab-capture] saved ${read.name} (${item}) — no sync token, not uploaded`);
         }
-        emitEvent({ state: "captured", name: read.name, uploaded: uploadedOk });
+        // uploaded:true  => confirmed on the site. queued:true => saved + retrying (NOT done yet).
+        emitEvent({ state: "captured", name: read.name, uploaded: uploadedOk, queued: !uploadedOk && !!cfg.syncToken });
       } else if (read.kind === "fabricator" && fab) {
         // In the kiosk with image capture on, but the item name didn't resolve to a known
         // blueprint (still rendering in, or an item not in our dataset) — so there's nothing
@@ -298,6 +324,7 @@ function startFabCapture({ port, configDir, onStatus }) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title: read.titleRaw }),
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
           });
         } catch { /* best effort */ }
       }
@@ -308,10 +335,53 @@ function startFabCapture({ port, configDir, onStatus }) {
     }
   }
 
+  // Independent upload-drain loop. Uploads captured-but-unconfirmed items from their saved local
+  // JPEGs until the server actually has them — decoupled from the screen-read tick and its busy
+  // flag, so it drains even while the user is off the kiosk (no re-scan needed). On the FIRST pass
+  // it reconciles the whole fab-captures folder against the site's have-list, so captures stranded
+  // by a past failure/wedge self-heal on the next launch instead of being silently lost.
+  async function drainPending() {
+    const cfg = readConfig(configDir);
+    if (cfg.fabCapture !== true || !cfg.syncToken) return; // needs opt-in + a token to upload
+    if (drainBusy) return;
+    drainBusy = true;
+    try {
+      const have = await ensureRemoteHave();
+      if (!seededPending) {
+        seededPending = true;
+        try {
+          for (const f of fs.readdirSync(captureDir)) {
+            if (!f.endsWith(".jpg")) continue;
+            const it = f.slice(0, -4);
+            if (!have.has(it) && !uploaded.has(it) && !pendingUploads.has(it)) pendingUploads.set(it, null);
+          }
+        } catch { /* no captures dir yet */ }
+        if (pendingUploads.size) console.log(`[fab-capture] reconcile: ${pendingUploads.size} local capture(s) not on the server — uploading`);
+      }
+      for (const [it, name] of [...pendingUploads]) {
+        if (have.has(it) || uploaded.has(it)) { pendingUploads.delete(it); continue; } // already there
+        let jpeg;
+        try { jpeg = fs.readFileSync(path.join(captureDir, `${it}.jpg`)); }
+        catch { pendingUploads.delete(it); continue; } // local file gone — nothing to retry
+        if (await upload(it, jpeg, cfg.syncToken)) {
+          pendingUploads.delete(it);
+          emitEvent({ state: "shared", name, pending: pendingUploads.size });
+          console.log(`[fab-capture] retry uploaded ${name || it} (${pendingUploads.size} still pending)`);
+        }
+      }
+    } catch (e) {
+      console.error("[fab-capture] drain error:", e && e.message);
+    } finally {
+      drainBusy = false;
+    }
+  }
+
   const timer = setInterval(tick, POLL_MS);
   timer.unref?.();
+  const drainTimer = setInterval(drainPending, DRAIN_MS);
+  drainTimer.unref?.();
   console.log("[fab-capture] loop armed (opt-in via config.fabCapture)");
-  return () => clearInterval(timer);
+  return () => { clearInterval(timer); clearInterval(drainTimer); };
 }
 
 module.exports = { startFabCapture, centerTighten };

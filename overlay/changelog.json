@@ -1,4 +1,10 @@
 {
+  "0.1.31": [
+    "The fabricator reader can no longer get stuck — if a scan or upload ever hangs, it recovers on its own instead of sitting on \"Reading the fabricator…\" until you restart the app.",
+    "Captured item images upload reliably now: a failed upload retries by itself, and on startup the app re-checks and sends up any captures that never made it to the site — no more \"it said it saved but never showed up.\"",
+    "Clearer scanning status — the overlay names the item it's reading, and tells you the truth about uploads: \"shared\" only once the picture is actually on the site, \"upload failed — retrying\" otherwise (no more misleading \"saved\").",
+    "The What's New card now shows the last several versions, so if you've been away for a bit you can catch up on everything you missed — not just the newest patch."
+  ],
   "0.1.30": [
     "New Consolidated Outland skin — hop in a Nomad and the overlay picks up its frosty ice-cyan HUD. Grey's now shows its logo in the folder-tab too.",
     "Updated for the latest patch with fuller crafting recipes, mining and commodity data, and a much larger set of mission payouts.",

@@ -933,9 +933,18 @@ const server = createServer(async (req, res) => {
   // bun-compiled sidecar can't read package.json), falling back to APP_VERSION in dev.
   if (url === "/api/changelog" && req.method === "GET") {
     const ver = new URL(req.url ?? "", "http://x").searchParams.get("v")?.trim() || APP_VERSION;
-    const notes = ver ? loadChangelog()[ver] ?? [] : [];
+    const cl = loadChangelog();
+    // Return the 5 most recent versions (semver desc), not just the current one — we patch fast,
+    // so a user returning a day later has often skipped a few versions and would otherwise only
+    // see the newest. `version`/`seen` still govern whether the card shows (on a version bump).
+    const cmpDesc = (a: string, b: string) => {
+      const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
+      for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pb[i] || 0) - (pa[i] || 0);
+      return 0;
+    };
+    const entries = Object.keys(cl).sort(cmpDesc).slice(0, 5).map((v) => ({ version: v, notes: cl[v] ?? [] }));
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    res.end(JSON.stringify({ version: ver, notes, seen: config.seenChangelog === ver }));
+    res.end(JSON.stringify({ version: ver, entries, seen: config.seenChangelog === ver }));
     return;
   }
   // Dismiss the "what's new" card — don't show it again until the next version.
