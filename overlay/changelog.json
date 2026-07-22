@@ -1,4 +1,17 @@
 {
+  "0.1.33": {
+    "date": "2026-07-22T06:45:00Z",
+    "notes": [
+      "New Notepad widget — jot notes right on the overlay. Make as many titled notes as you like; they autosave, and you can drag the box bigger and bump the text size to suit any monitor. Turn it on from the settings cog's widget list or the tray. To type while you're in the game, click \"Type\" — it grabs the keyboard and frees up your interact key so you're not alt-tabbing.",
+      "New \"Blueprint Received\" pop — the moment you collect any blueprint it flashes the item and name, no matter which mission you're tracking. Handy when you've got several of the same mission on the go and the receipt used to land on one you weren't looking at.",
+      "The idle screen (when nothing's tracked) now shows your reputation and aUEC per hour — both what you earned in the last hour and your current grind pace. aUEC shows \"—\" for missions the game doesn't report a payout for (most of them right now).",
+      "\"Guaranteed rewards\" are now \"Physical Rewards\" — the actual items/ships a mission hands over (the game never tells the app when you get these). Tick one off once it's in your hangar and it tucks away under a \"Received\" list, so you can keep track of what you've collected.",
+      "New \"Patch notes\" button in the settings cog — pop this What's New card back up any time.",
+      "Fixed the What's New card opening half on one monitor and half on the other — it now centers on your main display.",
+      "Fixed Quantum Drive names (like the XL-1) not being recognized at the Fabrication Kiosk, so their images can be captured and contributed now.",
+      "Fixed dark, low-contrast items (black visors, dark-finish armor) getting clipped in captured item images."
+    ]
+  },
   "0.1.32": {
     "date": "2026-07-22T02:00:23Z",
     "notes": [
